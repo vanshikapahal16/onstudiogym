@@ -1,0 +1,95 @@
+{
+  "admins": [
+    {
+      "_id": "6a0d71af48bdc2acb31c1043",
+      "fullName": "Super Admin",
+      "email": "admin@gym.com",
+      "password": "$2b$10$LlMW7WaE7RVqESNWeaUuqucwROGbNm4ozrGN5g.P7aKUw9G.Wh1r2",
+      "role": "admin",
+      "createdAt": "2026-05-20T08:32:47.080Z",
+      "updatedAt": "2026-05-20T08:32:47.164Z"
+    }
+  ],
+  "members": [
+    {
+      "_id": "6a0d71af48bdc2acb31c1044",
+      "fullName": "Gym Member",
+      "phoneNumber": "9876543210",
+      "email": "member@gym.com",
+      "address": "123 Fitness Street",
+      "password": "$2b$10$CCE0UDNWXELg2780X/94J.uu5LDpRm1Uc3OKhWmgmnkIOPSIIUP4G",
+      "membershipDuration": 12,
+      "membershipExpiry": "2027-05-21T18:11:34.071Z",
+      "totalFee": 500,
+      "totalPaid": 500,
+      "remainingAmount": 0,
+      "membershipStatus": "Active",
+      "mustChangePassword": false,
+      "role": "member",
+      "createdAt": "2026-05-20T08:32:47.312Z",
+      "updatedAt": "2026-05-21T18:11:34.071Z",
+      "lastVisit": "2026-05-21T18:11:34.071Z",
+      "attendanceCount": 1
+    },
+    {
+      "_id": "6a0f488b37074cfbd1dd5ed2",
+      "fullName": "vanshika",
+      "phoneNumber": "9588715527",
+      "email": "vanshikapahal16@gmail.com",
+      "address": "sonipat",
+      "password": "$2b$10$JcfnAyid1VG61e.P55Aacu3vqwYwtU7PsCOXlDZ6nxsee/WQOKtdW",
+      "profileImage": "https://ui-avatars.com/api/?name=Gym+Member&background=random",
+      "totalFee": 1000,
+      "membershipDuration": 1,
+      "totalPaid": 0,
+      "mustChangePassword": true,
+      "membershipExpiry": "2026-06-21T18:01:47.339Z",
+      "remainingAmount": 1000,
+      "membershipStatus": "Active",
+      "updatedAt": "2026-05-21T18:01:47.339Z",
+      "createdAt": "2026-05-21T18:01:47.339Z"
+    }
+  ],
+  "payments": [],
+  "notifications": [],
+  "inquiries": [],
+  "exercises": [],
+  "gallery": [
+    {
+      "_id": "6a0f4a9383e9c15bc3bede06",
+      "publicId": "default_entrance_1",
+      "url": "/images/gym/entrance_1.png",
+      "caption": "ON FITNESS STUDIO Main Entrance",
+      "order": 0,
+      "updatedAt": "2026-05-21T18:10:27.891Z",
+      "createdAt": "2026-05-21T18:10:27.893Z"
+    },
+    {
+      "_id": "6a0f4a9383e9c15bc3bede07",
+      "publicId": "default_entrance_2",
+      "url": "/images/gym/entrance_2.png",
+      "caption": "ON FITNESS STUDIO - Ganaur Sign",
+      "order": 1,
+      "updatedAt": "2026-05-21T18:10:27.895Z",
+      "createdAt": "2026-05-21T18:10:27.895Z"
+    },
+    {
+      "_id": "6a0f4a9383e9c15bc3bede08",
+      "publicId": "default_owner_posing",
+      "url": "/images/owner/owner_posing.png",
+      "caption": "Founder & Head Coach Posing in Gym",
+      "order": 2,
+      "updatedAt": "2026-05-21T18:10:27.897Z",
+      "createdAt": "2026-05-21T18:10:27.897Z"
+    }
+  ],
+  "attendance": [
+    {
+      "_id": "6a0f4ad639012a29df53c7d1",
+      "memberId": "6a0d71af48bdc2acb31c1044",
+      "checkIn": "2026-05-21T18:11:34.067Z",
+      "updatedAt": "2026-05-21T18:11:34.070Z",
+      "createdAt": "2026-05-21T18:11:34.070Z"
+    }
+  ]
+}

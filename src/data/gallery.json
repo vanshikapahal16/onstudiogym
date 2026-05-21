@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "url": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop",
+    "caption": "Modern Weight Training Area",
+    "order": 0
+  },
+  {
+    "id": "2",
+    "url": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop",
+    "caption": "Professional Trainers",
+    "order": 1
+  },
+  {
+    "id": "3",
+    "url": "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=1470&auto=format&fit=crop",
+    "caption": "Premium Cardio Equipment",
+    "order": 2
+  },
+  {
+    "id": "4",
+    "url": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop",
+    "caption": "Heavy Lifting Zone",
+    "order": 3
+  }
+]

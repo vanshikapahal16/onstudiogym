@@ -1,0 +1,648 @@
+import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
+import bcrypt from "bcryptjs";
+
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/on_fitness";
+
+if (!MONGODB_URI) {
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+}
+
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+declare global {
+  var mongooseCached: MongooseCache;
+  var useMockDatabase: boolean;
+}
+
+let cached = global.mongooseCached;
+
+if (!cached) {
+  cached = global.mongooseCached = { conn: null, promise: null };
+}
+
+// ----------------------------------------------------
+// LOCAL JSON DATABASE MOCK IMPLEMENTATION
+// ----------------------------------------------------
+
+const dbFilePath = path.join(process.cwd(), "src", "data", "db.json");
+
+function getMockData() {
+  if (!fs.existsSync(dbFilePath)) {
+    const dir = path.dirname(dbFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const defaultData = {
+      admins: [],
+      members: [],
+      payments: [],
+      notifications: [],
+      inquiries: [],
+      exercises: [],
+      gallery: [],
+      attendance: []
+    };
+    fs.writeFileSync(dbFilePath, JSON.stringify(defaultData, null, 2), "utf8");
+  }
+  try {
+    return JSON.parse(fs.readFileSync(dbFilePath, "utf8"));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveMockData(data: any) {
+  fs.writeFileSync(dbFilePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function getCollectionName(modelName: string): string {
+  const map: any = {
+    Admin: "admins",
+    Member: "members",
+    Payment: "payments",
+    Notification: "notifications",
+    Inquiry: "inquiries",
+    Exercise: "exercises",
+    Gallery: "gallery",
+    Attendance: "attendance"
+  };
+  return map[modelName] || modelName.toLowerCase() + "s";
+}
+
+function matchesQuery(item: any, filter: any): boolean {
+  if (!filter || Object.keys(filter).length === 0) return true;
+
+  for (const key of Object.keys(filter)) {
+    const filterVal = filter[key];
+
+    if (key === "$or" && Array.isArray(filterVal)) {
+      let matched = false;
+      for (const subFilter of filterVal) {
+        if (matchesQuery(item, subFilter)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) return false;
+      continue;
+    }
+
+    if (key === "$and" && Array.isArray(filterVal)) {
+      for (const subFilter of filterVal) {
+        if (!matchesQuery(item, subFilter)) {
+          return false;
+        }
+      }
+      continue;
+    }
+
+    const itemVal = item[key];
+
+    const isOperatorObj = filterVal && typeof filterVal === "object" && 
+                          !Array.isArray(filterVal) && 
+                          !(filterVal instanceof Date) &&
+                          Object.keys(filterVal).some(k => k.startsWith("$"));
+
+    if (isOperatorObj) {
+      for (const op of Object.keys(filterVal)) {
+        const opVal = filterVal[op];
+        if (op === "$gte") {
+          if (new Date(itemVal) < new Date(opVal)) return false;
+        } else if (op === "$lte") {
+          if (new Date(itemVal) > new Date(opVal)) return false;
+        } else if (op === "$gt") {
+          if (new Date(itemVal) <= new Date(opVal)) return false;
+        } else if (op === "$lt") {
+          if (new Date(itemVal) >= new Date(opVal)) return false;
+        } else if (op === "$ne") {
+          if (itemVal === opVal) return false;
+        } else if (op === "$in" && Array.isArray(opVal)) {
+          if (!opVal.includes(itemVal)) return false;
+        }
+      }
+      continue;
+    }
+
+    const itemStr = itemVal ? itemVal.toString() : "";
+    const filterStr = filterVal ? filterVal.toString() : "";
+    if (itemStr !== filterStr) {
+      if (key === "email" && itemStr.toLowerCase() === filterStr.toLowerCase()) {
+        continue;
+      }
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function runMockFind(modelName: string, filter: any, options: { limit?: number | null, skip?: number | null, sort?: any } = {}) {
+  const data = getMockData();
+  const collectionName = getCollectionName(modelName);
+  let collection = data[collectionName] || [];
+
+  let results = collection.filter((item: any) => matchesQuery(item, filter));
+
+  if (options.sort) {
+    const sortKeys = Object.keys(options.sort);
+    results.sort((a: any, b: any) => {
+      for (const key of sortKeys) {
+        const dir = options.sort[key] === -1 || options.sort[key] === "desc" ? -1 : 1;
+        if (a[key] < b[key]) return -1 * dir;
+        if (a[key] > b[key]) return 1 * dir;
+      }
+      return 0;
+    });
+  }
+
+  if (options.skip) {
+    results = results.slice(options.skip);
+  }
+
+  if (options.limit) {
+    results = results.slice(0, options.limit);
+  }
+
+  return results.map((item: any) => createMockDocument(modelName, item));
+}
+
+class MockQuery {
+  private modelName: string;
+  private filter: any;
+  private _limit: number | null = null;
+  private _skip: number | null = null;
+  private _sort: any = null;
+  private _single: boolean = false;
+
+  constructor(modelName: string, filter: any, single: boolean = false) {
+    this.modelName = modelName;
+    this.filter = filter;
+    this._single = single;
+  }
+
+  sort(sortOpts: any) {
+    this._sort = sortOpts;
+    return this;
+  }
+
+  limit(limitVal: number) {
+    this._limit = limitVal;
+    return this;
+  }
+
+  skip(skipVal: number) {
+    this._skip = skipVal;
+    return this;
+  }
+
+  populate(path: any) {
+    return this;
+  }
+
+  select(projection: any) {
+    return this;
+  }
+
+  lean() {
+    return this;
+  }
+
+  async exec() {
+    if (this._single) {
+      const results = runMockFind(this.modelName, this.filter, {
+        limit: 1,
+        sort: this._sort,
+      });
+      return results.length > 0 ? results[0] : null;
+    } else {
+      return runMockFind(this.modelName, this.filter, {
+        limit: this._limit,
+        skip: this._skip,
+        sort: this._sort,
+      });
+    }
+  }
+
+  then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
+    return this.exec().then(onfulfilled, onrejected);
+  }
+
+  catch(onrejected?: (reason: any) => any) {
+    return this.exec().catch(onrejected);
+  }
+
+  finally(onfinally?: () => void) {
+    return this.exec().finally(onfinally);
+  }
+}
+
+function createMockDocument(modelName: string, rawDoc: any) {
+  if (!rawDoc) return null;
+  
+  const doc = { ...rawDoc };
+  
+  if (doc._id) {
+    const idStr = doc._id.toString();
+    doc._id = {
+      toString: () => idStr,
+      toJSON: () => idStr,
+      equals: (other: any) => other && other.toString() === idStr
+    } as any;
+  }
+
+  doc.isModified = function(pathName: string) {
+    if (pathName === "password") {
+      return doc.password && !doc.password.startsWith("$2b$") && !doc.password.startsWith("$2a$");
+    }
+    return false;
+  };
+
+  doc.save = async function() {
+    const data = getMockData();
+    const collectionName = getCollectionName(modelName);
+    const collection = data[collectionName] || [];
+
+    if (modelName === "Member") {
+      if (doc.isModified("password")) {
+        const salt = await bcrypt.genSalt(10);
+        doc.password = await bcrypt.hash(doc.password, salt);
+      }
+      if (!doc.membershipExpiry || doc.membershipDuration) {
+        const joinDate = doc.joinDate ? new Date(doc.joinDate) : new Date();
+        const duration = doc.membershipDuration || 12;
+        doc.membershipExpiry = new Date(joinDate.setMonth(joinDate.getMonth() + duration));
+      }
+      doc.remainingAmount = Math.max(0, (doc.totalFee || 0) - (doc.totalPaid || 0));
+      if (doc.membershipStatus !== "Suspended") {
+        const diffDays = Math.ceil((new Date(doc.membershipExpiry).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+        if (diffDays < 0) {
+          doc.membershipStatus = "Expired";
+        } else if (diffDays <= 10) {
+          doc.membershipStatus = "Expiring Soon";
+        } else {
+          doc.membershipStatus = "Active";
+        }
+      }
+    } else if (modelName === "Admin") {
+      if (doc.isModified("password")) {
+        const salt = await bcrypt.genSalt(10);
+        doc.password = await bcrypt.hash(doc.password, salt);
+      }
+    }
+
+    doc.updatedAt = new Date().toISOString();
+    
+    const idStr = doc._id.toString();
+    const idx = collection.findIndex((item: any) => item._id === idStr);
+    
+    const rawToSave = { ...doc };
+    delete rawToSave.isModified;
+    delete rawToSave.save;
+    delete rawToSave.comparePassword;
+    delete rawToSave.updateOne;
+    delete rawToSave.deleteOne;
+    rawToSave._id = idStr;
+
+    if (idx >= 0) {
+      collection[idx] = rawToSave;
+    } else {
+      rawToSave.createdAt = new Date().toISOString();
+      collection.push(rawToSave);
+    }
+
+    data[collectionName] = collection;
+    saveMockData(data);
+    return doc;
+  };
+
+  doc.comparePassword = async function(password: string) {
+    const hash = rawDoc.password || "";
+    if (hash.startsWith("$2a$") || hash.startsWith("$2b$")) {
+      return bcrypt.compare(password, hash);
+    }
+    return password === hash;
+  };
+
+  doc.updateOne = async function(updateObj: any) {
+    const updates = updateObj.$set || updateObj;
+    for (const key of Object.keys(updates)) {
+      doc[key] = updates[key];
+    }
+    return doc.save();
+  };
+
+  doc.deleteOne = async function() {
+    const data = getMockData();
+    const collectionName = getCollectionName(modelName);
+    const idStr = doc._id.toString();
+    data[collectionName] = (data[collectionName] || []).filter((item: any) => item._id !== idStr);
+    saveMockData(data);
+    return { deletedCount: 1 };
+  };
+
+  return doc;
+}
+
+function wrapModel(modelName: string, modelClass: any) {
+  const originalFind = modelClass.find;
+  const originalFindOne = modelClass.findOne;
+  const originalFindById = modelClass.findById;
+  const originalCountDocuments = modelClass.countDocuments;
+  const originalCreate = modelClass.create;
+  const originalFindByIdAndDelete = modelClass.findByIdAndDelete;
+  const originalFindByIdAndUpdate = modelClass.findByIdAndUpdate;
+  const originalUpdateOne = modelClass.updateOne;
+  const originalUpdateMany = modelClass.updateMany;
+  const originalDeleteOne = modelClass.deleteOne;
+  const originalDeleteMany = modelClass.deleteMany;
+
+  const originalInsertMany = modelClass.insertMany;
+
+  modelClass.find = function(query: any) {
+    if (global.useMockDatabase) {
+      return new MockQuery(modelName, query) as any;
+    }
+    return originalFind.apply(this, arguments as any);
+  };
+
+  modelClass.findOne = function(query: any) {
+    if (global.useMockDatabase) {
+      return new MockQuery(modelName, query, true) as any;
+    }
+    return originalFindOne.apply(this, arguments as any);
+  };
+
+  modelClass.findById = function(id: any) {
+    if (global.useMockDatabase) {
+      return new MockQuery(modelName, { _id: id }, true) as any;
+    }
+    return originalFindById.apply(this, arguments as any);
+  };
+
+  modelClass.countDocuments = function(query: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, query);
+      return Promise.resolve(results.length) as any;
+    }
+    return originalCountDocuments.apply(this, arguments as any);
+  };
+
+  modelClass.create = function(doc: any) {
+    if (global.useMockDatabase) {
+      if (Array.isArray(doc)) {
+        const promises = doc.map((d: any) => {
+          const rawDoc = { _id: new mongoose.Types.ObjectId().toString(), ...d };
+          const mockDoc: any = createMockDocument(modelName, rawDoc);
+          return mockDoc.save();
+        });
+        return Promise.all(promises) as any;
+      }
+      const rawDoc = { _id: new mongoose.Types.ObjectId().toString(), ...doc };
+      const mockDoc: any = createMockDocument(modelName, rawDoc);
+      return mockDoc.save() as any;
+    }
+    return originalCreate.apply(this, arguments as any);
+  };
+
+  modelClass.insertMany = function(docs: any) {
+    if (global.useMockDatabase) {
+      const arr = Array.isArray(docs) ? docs : [docs];
+      const promises = arr.map((d: any) => {
+        const rawDoc = { _id: new mongoose.Types.ObjectId().toString(), ...d };
+        const mockDoc: any = createMockDocument(modelName, rawDoc);
+        return mockDoc.save();
+      });
+      return Promise.all(promises) as any;
+    }
+    return originalInsertMany.apply(this, arguments as any);
+  };
+
+  modelClass.findByIdAndDelete = function(id: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, { _id: id }, { limit: 1 });
+      if (results.length > 0) {
+        return results[0].deleteOne();
+      }
+      return Promise.resolve(null) as any;
+    }
+    return originalFindByIdAndDelete.apply(this, arguments as any);
+  };
+
+  modelClass.findByIdAndUpdate = function(id: any, update: any, options: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, { _id: id }, { limit: 1 });
+      if (results.length > 0) {
+        const doc = results[0];
+        const updates = update.$set || update;
+        for (const key of Object.keys(updates)) {
+          doc[key] = updates[key];
+        }
+        return doc.save() as any;
+      }
+      return Promise.resolve(null) as any;
+    }
+    return originalFindByIdAndUpdate.apply(this, arguments as any);
+  };
+
+  modelClass.updateOne = function(query: any, update: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, query, { limit: 1 });
+      if (results.length > 0) {
+        const doc = results[0];
+        const updates = update.$set || update;
+        for (const key of Object.keys(updates)) {
+          doc[key] = updates[key];
+        }
+        return doc.save().then(() => ({ modifiedCount: 1 })) as any;
+      }
+      return Promise.resolve({ modifiedCount: 0 }) as any;
+    }
+    return originalUpdateOne.apply(this, arguments as any);
+  };
+
+  modelClass.updateMany = function(query: any, update: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, query);
+      const promises = results.map((doc: any) => {
+        const updates = update.$set || update;
+        for (const key of Object.keys(updates)) {
+          doc[key] = updates[key];
+        }
+        return doc.save();
+      });
+      return Promise.all(promises).then((res) => ({ modifiedCount: res.length })) as any;
+    }
+    return originalUpdateMany.apply(this, arguments as any);
+  };
+
+  modelClass.deleteOne = function(query: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, query, { limit: 1 });
+      if (results.length > 0) {
+        return results[0].deleteOne() as any;
+      }
+      return Promise.resolve({ deletedCount: 0 }) as any;
+    }
+    return originalDeleteOne.apply(this, arguments as any);
+  };
+
+  modelClass.deleteMany = function(query: any) {
+    if (global.useMockDatabase) {
+      const results = runMockFind(modelName, query);
+      const promises = results.map((doc: any) => doc.deleteOne());
+      return Promise.all(promises).then((res) => ({ deletedCount: res.length })) as any;
+    }
+    return originalDeleteMany.apply(this, arguments as any);
+  };
+}
+
+function initMockDatabase() {
+  for (const modelName of Object.keys(mongoose.models)) {
+    const model = mongoose.models[modelName];
+    wrapModel(modelName, model);
+  }
+
+  const data = getMockData();
+  let dataChanged = false;
+
+  if (!data.admins || data.admins.length === 0) {
+    data.admins = [
+      {
+        _id: new mongoose.Types.ObjectId().toString(),
+        fullName: "Super Admin",
+        email: "admin@gym.com",
+        password: "Admin@123",
+        role: "admin",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    dataChanged = true;
+  }
+
+  if (!data.members || data.members.length === 0) {
+    data.members = [
+      {
+        _id: new mongoose.Types.ObjectId().toString(),
+        fullName: "Gym Member",
+        phoneNumber: "9876543210",
+        email: "member@gym.com",
+        address: "123 Fitness Street",
+        password: "Member@123",
+        membershipDuration: 12,
+        membershipExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        totalFee: 500,
+        totalPaid: 500,
+        remainingAmount: 0,
+        membershipStatus: "Active",
+        mustChangePassword: false,
+        role: "member",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    dataChanged = true;
+  }
+
+  if (dataChanged) {
+    (async () => {
+      for (const admin of data.admins) {
+        if (!admin.password.startsWith("$2b$") && !admin.password.startsWith("$2a$")) {
+          const salt = await bcrypt.genSalt(10);
+          admin.password = await bcrypt.hash(admin.password, salt);
+        }
+      }
+      for (const member of data.members) {
+        if (!member.password.startsWith("$2b$") && !member.password.startsWith("$2a$")) {
+          const salt = await bcrypt.genSalt(10);
+          member.password = await bcrypt.hash(member.password, salt);
+        }
+      }
+      saveMockData(data);
+      console.log("🌱 Local JSON database successfully seeded!");
+    })();
+  }
+}
+
+const originalModel = mongoose.model;
+(mongoose as any).model = function (name: string, schema: any, collection: any) {
+  const model = originalModel.apply(this, arguments as any);
+  if (global.useMockDatabase) {
+    wrapModel(name, model);
+  }
+  return model;
+};
+
+// Seed Real MongoDB Database
+async function seedDatabaseIfEmpty() {
+  try {
+    const Admin = mongoose.models.Admin || require("@/models/Admin").default || require("@/models/Admin");
+    const Member = mongoose.models.Member || require("@/models/Member").default || require("@/models/Member");
+
+    const adminCount = await Admin.countDocuments();
+    if (adminCount === 0) {
+      console.log("🌱 Seeding real database admin...");
+      await Admin.create({
+        fullName: "Super Admin",
+        email: "admin@gym.com",
+        password: "Admin@123",
+        role: "admin",
+      });
+    }
+    
+    const memberCount = await Member.countDocuments();
+    if (memberCount === 0) {
+      console.log("🌱 Seeding real database member...");
+      await Member.create({
+        fullName: "Gym Member",
+        phoneNumber: "9876543210",
+        email: "member@gym.com",
+        address: "123 Fitness Street",
+        password: "Member@123",
+        membershipDuration: 12,
+        totalFee: 500,
+        totalPaid: 500,
+        mustChangePassword: false,
+        role: "member",
+      });
+    }
+  } catch (error) {
+    console.error("❌ Failed to seed real database:", error);
+  }
+}
+
+export async function connectToDatabase() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+      return mongooseInstance;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+    console.log("🔋 Connected successfully to MongoDB Atlas database.");
+    await seedDatabaseIfEmpty();
+  } catch (e: any) {
+    cached.promise = null;
+    cached.conn = null;
+    console.warn("❌ MongoDB connection failed. Activating local JSON database fallback.");
+    console.warn("Reason:", e.message);
+    global.useMockDatabase = true;
+    initMockDatabase();
+  }
+
+  return cached.conn;
+}

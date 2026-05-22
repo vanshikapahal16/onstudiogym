@@ -257,7 +257,7 @@ function createMockDocument(modelName: string, rawDoc: any) {
 
   doc.isModified = function(pathName: string) {
     if (pathName === "password") {
-      return doc.password && !doc.password.startsWith("$2b$") && !doc.password.startsWith("$2a$");
+      return (doc.password || doc._password) && !(doc.password || "").startsWith("$2b$") && !(doc.password || "").startsWith("$2a$");
     }
     return false;
   };
@@ -268,18 +268,47 @@ function createMockDocument(modelName: string, rawDoc: any) {
     const collection = data[collectionName] || [];
 
     if (modelName === "Member") {
+      // Map old fields to new fields for mock database
+      if (doc.fullName && !doc.name) doc.name = doc.fullName;
+      if (doc.name && !doc.fullName) doc.fullName = doc.name;
+      if (doc.phoneNumber && !doc.phone) doc.phone = doc.phoneNumber;
+      if (doc.phone && !doc.phoneNumber) doc.phoneNumber = doc.phone;
+      if (doc.joinDate && !doc.membershipStartDate) doc.membershipStartDate = doc.joinDate;
+      if (doc.membershipStartDate && !doc.joinDate) doc.joinDate = doc.membershipStartDate;
+      if (doc.membershipExpiry && !doc.membershipEndDate) doc.membershipEndDate = doc.membershipExpiry;
+      if (doc.membershipEndDate && !doc.membershipExpiry) doc.membershipExpiry = doc.membershipEndDate;
+
       if (doc.isModified("password")) {
+        const plainPwd = doc._password || doc.password;
         const salt = await bcrypt.genSalt(10);
-        doc.password = await bcrypt.hash(doc.password, salt);
+        doc.hashedPassword = await bcrypt.hash(plainPwd, salt);
+        doc.password = doc.hashedPassword;
       }
-      if (!doc.membershipExpiry || doc.membershipDuration) {
-        const joinDate = doc.joinDate ? new Date(doc.joinDate) : new Date();
-        const duration = doc.membershipDuration || 12;
-        doc.membershipExpiry = new Date(joinDate.setMonth(joinDate.getMonth() + duration));
+      
+      if (!doc.membershipEndDate || doc.membershipPlan || doc.membershipDuration) {
+        const start = doc.membershipStartDate ? new Date(doc.membershipStartDate) : new Date();
+        const duration = doc.membershipDuration || (doc.membershipPlan === "Quarterly" ? 3 : doc.membershipPlan === "Half-Yearly" ? 6 : doc.membershipPlan === "Annual" ? 12 : 1);
+        doc.membershipDuration = duration;
+        doc.membershipPlan = duration === 3 ? "Quarterly" : duration === 6 ? "Half-Yearly" : duration === 12 ? "Annual" : "Monthly";
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + duration);
+        doc.membershipEndDate = end.toISOString();
+        doc.membershipExpiry = doc.membershipEndDate;
       }
+      
       doc.remainingAmount = Math.max(0, (doc.totalFee || 0) - (doc.totalPaid || 0));
-      if (doc.membershipStatus !== "Suspended") {
-        const diffDays = Math.ceil((new Date(doc.membershipExpiry).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+      
+      // Calculate payment status
+      if ((doc.totalPaid || 0) >= (doc.totalFee || 0)) {
+        doc.paymentStatus = "Paid";
+      } else if ((doc.totalPaid || 0) > 0) {
+        doc.paymentStatus = "Partially Paid";
+      } else {
+        doc.paymentStatus = "Unpaid";
+      }
+
+      if (doc.membershipStatus !== "Suspended" && doc.isActive !== false) {
+        const diffDays = Math.ceil((new Date(doc.membershipEndDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
         if (diffDays < 0) {
           doc.membershipStatus = "Expired";
         } else if (diffDays <= 10) {
@@ -287,11 +316,16 @@ function createMockDocument(modelName: string, rawDoc: any) {
         } else {
           doc.membershipStatus = "Active";
         }
+      } else {
+        doc.membershipStatus = "Suspended";
+        doc.isActive = false;
       }
     } else if (modelName === "Admin") {
       if (doc.isModified("password")) {
+        const plainPwd = doc._password || doc.password;
         const salt = await bcrypt.genSalt(10);
-        doc.password = await bcrypt.hash(doc.password, salt);
+        doc.hashedPassword = await bcrypt.hash(plainPwd, salt);
+        doc.password = doc.hashedPassword;
       }
     }
 
@@ -321,7 +355,7 @@ function createMockDocument(modelName: string, rawDoc: any) {
   };
 
   doc.comparePassword = async function(password: string) {
-    const hash = rawDoc.password || "";
+    const hash = rawDoc.hashedPassword || rawDoc.password || "";
     if (hash.startsWith("$2a$") || hash.startsWith("$2b$")) {
       return bcrypt.compare(password, hash);
     }
@@ -514,10 +548,24 @@ function initMockDatabase() {
     data.admins = [
       {
         _id: new mongoose.Types.ObjectId().toString(),
-        fullName: "Super Admin",
-        email: "admin@gym.com",
-        password: "Admin@123",
+        name: "Vanshika",
+        phone: "9588715527",
+        email: "vanshikapahal16@gmail.com",
+        password: "Vanshika@123",
+        hashedPassword: "", // will be hashed below
+        role: "superadmin",
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        _id: new mongoose.Types.ObjectId().toString(),
+        name: "Sukchain",
+        phone: "8400050073",
+        password: "Sukchain@123",
+        hashedPassword: "", // will be hashed below
         role: "admin",
+        isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
@@ -529,17 +577,25 @@ function initMockDatabase() {
     data.members = [
       {
         _id: new mongoose.Types.ObjectId().toString(),
+        name: "Gym Member",
         fullName: "Gym Member",
+        phone: "9876543210",
         phoneNumber: "9876543210",
         email: "member@gym.com",
         address: "123 Fitness Street",
         password: "Member@123",
+        hashedPassword: "", // will be hashed below
+        membershipPlan: "Annual",
         membershipDuration: 12,
+        membershipStartDate: new Date().toISOString(),
+        membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
         membershipExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
         totalFee: 500,
         totalPaid: 500,
         remainingAmount: 0,
         membershipStatus: "Active",
+        paymentStatus: "Paid",
+        isActive: true,
         mustChangePassword: false,
         role: "member",
         createdAt: new Date().toISOString(),
@@ -552,15 +608,21 @@ function initMockDatabase() {
   if (dataChanged) {
     (async () => {
       for (const admin of data.admins) {
-        if (!admin.password.startsWith("$2b$") && !admin.password.startsWith("$2a$")) {
+        const pwd = admin.password || admin.hashedPassword;
+        if (pwd && !pwd.startsWith("$2b$") && !pwd.startsWith("$2a$")) {
           const salt = await bcrypt.genSalt(10);
-          admin.password = await bcrypt.hash(admin.password, salt);
+          const hashed = await bcrypt.hash(pwd, salt);
+          admin.password = hashed;
+          admin.hashedPassword = hashed;
         }
       }
       for (const member of data.members) {
-        if (!member.password.startsWith("$2b$") && !member.password.startsWith("$2a$")) {
+        const pwd = member.password || member.hashedPassword;
+        if (pwd && !pwd.startsWith("$2b$") && !pwd.startsWith("$2a$")) {
           const salt = await bcrypt.genSalt(10);
-          member.password = await bcrypt.hash(member.password, salt);
+          const hashed = await bcrypt.hash(pwd, salt);
+          member.password = hashed;
+          member.hashedPassword = hashed;
         }
       }
       saveMockData(data);
@@ -586,12 +648,24 @@ async function seedDatabaseIfEmpty() {
 
     const adminCount = await Admin.countDocuments();
     if (adminCount === 0) {
-      console.log("🌱 Seeding real database admin...");
+      console.log("🌱 Seeding real database admins (Vanshika & Sukchain)...");
+      // Seed Vanshika
       await Admin.create({
-        fullName: "Super Admin",
-        email: "admin@gym.com",
-        password: "Admin@123",
+        name: "Vanshika",
+        phone: "9588715527",
+        email: "vanshikapahal16@gmail.com",
+        password: "Vanshika@123",
+        role: "superadmin",
+        isActive: true,
+      });
+
+      // Seed Sukchain
+      await Admin.create({
+        name: "Sukchain",
+        phone: "8400050073",
+        password: "Sukchain@123",
         role: "admin",
+        isActive: true,
       });
     }
     
@@ -599,15 +673,17 @@ async function seedDatabaseIfEmpty() {
     if (memberCount === 0) {
       console.log("🌱 Seeding real database member...");
       await Member.create({
-        fullName: "Gym Member",
-        phoneNumber: "9876543210",
+        name: "Gym Member",
+        phone: "9876543210",
         email: "member@gym.com",
         address: "123 Fitness Street",
         password: "Member@123",
+        membershipPlan: "Annual",
         membershipDuration: 12,
         totalFee: 500,
         totalPaid: 500,
         mustChangePassword: false,
+        isActive: true,
         role: "member",
       });
     }

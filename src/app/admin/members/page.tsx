@@ -21,6 +21,8 @@ import {
   Clock,
   UserCheck,
   RefreshCw,
+  Key,
+  Ban,
 } from "lucide-react";
 
 interface Member {
@@ -78,6 +80,11 @@ export default function MembersPage() {
   const [tempPassword, setTempPassword] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
+  // New features states
+  const [customPassword, setCustomPassword] = useState("");
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
   useEffect(() => {
     fetchMembers();
   }, [searchQuery, statusFilter, pagination.page]);
@@ -120,6 +127,7 @@ export default function MembersPage() {
     setSubmitting(true);
 
     try {
+      const planName = membershipDuration === "1" ? "Monthly" : membershipDuration === "3" ? "Quarterly" : membershipDuration === "6" ? "Half-Yearly" : "Annual";
       const res = await fetch("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,10 +136,12 @@ export default function MembersPage() {
           phoneNumber,
           email: email || undefined,
           address,
+          membershipPlan: planName,
           membershipDuration: parseInt(membershipDuration),
           totalFee: parseFloat(totalFee),
           totalPaid: parseFloat(totalPaid),
           profileImage: profileImage || undefined,
+          password: customPassword || undefined,
         }),
       });
 
@@ -140,7 +150,7 @@ export default function MembersPage() {
         throw new Error(data.message || "Failed to create member");
       }
 
-      setTempPassword(data.data.tempPassword);
+      setTempPassword(data.data.tempPassword || customPassword || "Custom Password Set");
       // Wait for user to dismiss temporary password screen
       fetchMembers();
     } catch (error: any) {
@@ -324,6 +334,7 @@ export default function MembersPage() {
     setProfileImage("");
     setTempPassword("");
     setFormError("");
+    setCustomPassword("");
     setIsAddModalOpen(true);
   };
 
@@ -364,6 +375,74 @@ export default function MembersPage() {
     setSelectedMember(member);
     setIsDeleteModalOpen(true);
     setActiveDropdown(null);
+  };
+
+  const openResetPasswordModal = (member: Member) => {
+    setSelectedMember(member);
+    setNewPassword("");
+    setFormError("");
+    setIsResetPasswordModalOpen(true);
+    setActiveDropdown(null);
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMember) return;
+    setFormError("");
+    setSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/members/${selectedMember._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to reset password");
+      }
+
+      alert("Password reset successfully! Force change password flag is active for their next login.");
+      setIsResetPasswordModalOpen(false);
+      setNewPassword("");
+      setSelectedMember(null);
+      fetchMembers();
+    } catch (error: any) {
+      setFormError(error.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleSuspend = async (member: Member) => {
+    const isCurrentlySuspended = member.membershipStatus === "Suspended";
+    const confirmMsg = isCurrentlySuspended 
+      ? `Are you sure you want to reactivate ${member.fullName}?` 
+      : `Are you sure you want to suspend ${member.fullName}?`;
+      
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/members/${member._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isActive: isCurrentlySuspended,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Member ${isCurrentlySuspended ? "reactivated" : "suspended"} successfully!`);
+        fetchMembers();
+      } else {
+        alert(data.message || "Operation failed");
+      }
+    } catch (err: any) {
+      alert("Error occurred: " + err.message);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -523,6 +602,24 @@ export default function MembersPage() {
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
+                            title="Reset Password"
+                            onClick={() => openResetPasswordModal(member)}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/20 text-muted-foreground transition-colors cursor-pointer"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button
+                            title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Suspend Member"}
+                            onClick={() => handleToggleSuspend(member)}
+                            className={`p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground transition-colors cursor-pointer ${
+                              member.membershipStatus === "Suspended"
+                                ? "hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20"
+                                : "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
+                            }`}
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
+                          <button
                             title="Delete Member"
                             onClick={() => openDeleteModal(member)}
                             className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-muted-foreground transition-colors cursor-pointer"
@@ -599,48 +696,66 @@ export default function MembersPage() {
                 </div>
 
                 {/* Touch Actions */}
-                <div className="grid grid-cols-6 gap-1 pt-2 border-t border-white/5">
+                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/5">
                   <button
                     onClick={() => handleCheckIn(member._id)}
-                    className="py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-primary active:text-black transition-all"
+                    className="py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary active:text-black transition-all"
                   >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>In</span>
+                    <UserCheck className="w-4 h-4" />
+                    <span>Check-In</span>
                   </button>
                   <button
                     onClick={() => handleCheckOut(member._id)}
-                    className="py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-yellow-500 active:text-black transition-all"
+                    className="py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500 active:text-black transition-all"
                   >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Out</span>
+                    <Clock className="w-4 h-4" />
+                    <span>Check-Out</span>
                   </button>
                   <button
                     onClick={() => openPayModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-emerald-400 flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-emerald-500/10"
+                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-emerald-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-emerald-500/10"
                   >
-                    <CreditCard className="w-3.5 h-3.5" />
+                    <CreditCard className="w-4 h-4" />
                     <span>Pay</span>
                   </button>
                   <button
                     onClick={() => openRenewModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-indigo-400 flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-indigo-500/10"
+                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-indigo-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-indigo-500/10"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-4 h-4" />
                     <span>Renew</span>
                   </button>
                   <button
-                    onClick={() => openEditModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-blue-500/10"
+                    onClick={() => openResetPasswordModal(member)}
+                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-yellow-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500/10"
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    <Key className="w-4 h-4" />
+                    <span>Reset Pass</span>
+                  </button>
+                  <button
+                    onClick={() => handleToggleSuspend(member)}
+                    className={`py-2 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-[10px] font-bold gap-1 transition-all ${
+                      member.membershipStatus === "Suspended"
+                        ? "text-emerald-400 active:bg-emerald-500/10"
+                        : "text-orange-400 active:bg-orange-500/10"
+                    }`}
+                  >
+                    <Ban className="w-4 h-4" />
+                    <span>{member.membershipStatus === "Suspended" ? "Activate" : "Suspend"}</span>
+                  </button>
+                  <button
+                    onClick={() => openEditModal(member)}
+                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-blue-500/10"
+                  >
+                    <Edit2 className="w-4 h-4" />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => openDeleteModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-red-400 flex flex-col items-center justify-center text-[9px] font-bold gap-1 active:bg-red-500/10"
+                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-red-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-red-500/10"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Del</span>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
                   </button>
                 </div>
               </motion.div>
@@ -815,6 +930,19 @@ export default function MembersPage() {
                         accept="image/*"
                         onChange={handleFileChange}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-primary text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-black hover:file:bg-primary/90 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-primary" /> Custom Password (Optional)
+                      </label>
+                      <input
+                        type="password"
+                        value={customPassword}
+                        onChange={(e) => setCustomPassword(e.target.value)}
+                        placeholder="Leave blank to auto-generate"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
                       />
                     </div>
 
@@ -1211,6 +1339,69 @@ export default function MembersPage() {
                 >
                   {submitting ? "Deleting..." : "Confirm Delete"}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal - Reset Password */}
+      <AnimatePresence>
+        {isResetPasswordModalOpen && selectedMember && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md bg-[#0B0F19] border border-white/10 rounded-3xl p-6 sm:p-8 relative"
+            >
+              <button
+                onClick={() => setIsResetPasswordModalOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Key className="w-5 h-5 text-primary" /> Reset Password
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set a new password for <strong>{selectedMember.fullName}</strong>.
+                  </p>
+                </div>
+
+                {formError && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
+                    {formError}
+                  </div>
+                )}
+
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new secure password"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/95 transition-all shadow-[0_0_20px_rgba(0,255,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {submitting ? "Resetting..." : "Reset Password"}
+                  </button>
+                </form>
               </div>
             </motion.div>
           </div>

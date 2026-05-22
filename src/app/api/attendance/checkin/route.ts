@@ -2,14 +2,14 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Attendance from "@/models/Attendance";
 import Member from "@/models/Member";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError, sendNotFound } from "@/utils/response";
 
 // POST /api/attendance/checkin (Admin checks in a member)
 export async function POST(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized("Only admin/reception can perform check-in");
     }
 
@@ -25,9 +25,23 @@ export async function POST(req: NextRequest) {
       return sendNotFound("Member not found");
     }
 
-    // Check if membership is expired
-    if (member.membershipStatus === "Expired") {
-      return sendError("Access Denied: Membership has expired", null, 403);
+    // Check if member is active and not suspended/expired
+    if (!member.isActive || member.membershipStatus === "Suspended" || member.membershipStatus === "Expired") {
+      return sendError(`Access Denied: Member is inactive, suspended, or expired (Status: ${member.membershipStatus || "Inactive"})`, null, 403);
+    }
+
+    // Prevent duplicate check-ins on the same day
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const checkInToday = await Attendance.findOne({
+      memberId,
+      checkIn: { $gte: startOfToday, $lte: endOfToday }
+    });
+    if (checkInToday) {
+      return sendError("Member has already checked in today", null, 400);
     }
 
     // Check if already checked in (active session where checkOut is null)

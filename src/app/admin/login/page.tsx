@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Lock, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Lock, User, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +22,7 @@ export default function AdminLogin() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password }),
       });
 
       const data = await res.json();
@@ -78,15 +78,15 @@ export default function AdminLogin() {
             )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                <Mail className="w-4 h-4" /> Email Address
+                <User className="w-4 h-4" /> Email or Phone Number
               </label>
               <input 
-                type="email" 
+                type="text" 
                 required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary transition-colors" 
-                placeholder="admin@onfitness.com" 
+                placeholder="Email or phone number" 
               />
             </div>
             

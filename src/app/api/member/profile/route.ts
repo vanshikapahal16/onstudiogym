@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     await connectToDatabase();
-    const member = await Member.findById(decoded.id).select("-password");
+    const member = await Member.findById(decoded.id).select("-password -hashedPassword");
 
     if (!member) {
       return sendNotFound("Member not found");

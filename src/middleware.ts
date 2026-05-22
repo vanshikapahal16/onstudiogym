@@ -29,13 +29,13 @@ export function middleware(request: NextRequest) {
     // Protect Admin Routes
     if (pathname.startsWith("/admin")) {
       if (pathname === "/admin/login") {
-        if (payload && payload.role === "admin") {
+        if (payload && (payload.role === "admin" || payload.role === "superadmin")) {
           return NextResponse.redirect(new URL("/admin", request.url));
         }
         return NextResponse.next();
       }
 
-      if (!payload || payload.role !== "admin") {
+      if (!payload || (payload.role !== "admin" && payload.role !== "superadmin")) {
         return NextResponse.redirect(new URL("/admin/login", request.url));
       }
     }

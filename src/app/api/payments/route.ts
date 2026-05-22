@@ -3,14 +3,14 @@ import { connectToDatabase } from "@/lib/db";
 import Payment from "@/models/Payment";
 import Member from "@/models/Member";
 import Notification from "@/models/Notification";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError, sendNotFound } from "@/utils/response";
 
 // GET /api/payments (Admin gets all payments list)
 export async function GET(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!isAdmin(decoded)) {
       return sendUnauthorized();
     }
 
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!isAdmin(decoded)) {
       return sendUnauthorized();
     }
 

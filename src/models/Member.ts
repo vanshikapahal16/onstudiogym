@@ -4,46 +4,58 @@ import { addMonths, differenceInDays } from "date-fns";
 
 const MemberSchema = new mongoose.Schema(
   {
-    fullName: {
+    name: {
       type: String,
-      required: [true, "Full name is required"],
+      required: [true, "Name is required"],
+      alias: "fullName",
       index: true,
     },
-    phoneNumber: {
+    phone: {
       type: String,
       required: [true, "Phone number is required"],
       unique: true,
+      alias: "phoneNumber",
       index: true,
     },
     email: {
       type: String,
+      required: [true, "Email is required"],
+      unique: true,
       index: true,
       lowercase: true,
       trim: true,
+    },
+    hashedPassword: {
+      type: String,
+      required: [true, "Password is required"],
     },
     address: {
       type: String,
       required: [true, "Address is required"],
     },
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-    },
     profileImage: {
       type: String,
       default: "https://ui-avatars.com/api/?name=Gym+Member&background=random",
     },
-    joinDate: {
+    membershipPlan: {
+      type: String,
+      enum: ["Monthly", "Quarterly", "Half-Yearly", "Annual"],
+      default: "Monthly",
+    },
+    membershipStartDate: {
       type: Date,
+      alias: "joinDate",
       default: Date.now,
+    },
+    membershipEndDate: {
+      type: Date,
+      alias: "membershipExpiry",
+      index: true,
     },
     membershipDuration: {
       type: Number, // in months
       required: [true, "Membership duration is required"],
-    },
-    membershipExpiry: {
-      type: Date,
-      index: true,
+      default: 1,
     },
     totalFee: {
       type: Number,
@@ -62,6 +74,20 @@ const MemberSchema = new mongoose.Schema(
       enum: ["Active", "Expiring Soon", "Expired", "Suspended"],
       default: "Active",
       index: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["Paid", "Partially Paid", "Unpaid"],
+      default: "Unpaid",
+      index: true,
+    },
+    createdByAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     lastVisit: {
       type: Date,
@@ -85,45 +111,100 @@ const MemberSchema = new mongoose.Schema(
       type: Date,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Virtual for password
+MemberSchema.virtual("password")
+  .get(function (this: any) {
+    return this.hashedPassword;
+  })
+  .set(function (this: any, val: string) {
+    this._password = val;
+  });
 
 // Hash password & Automate fields before saving
 MemberSchema.pre("save", async function () {
-  // Hash password if modified
-  if (this.isModified("password")) {
+  const self = this as any;
+  // Hash password if plain text was set on virtual
+  if (self._password) {
     try {
       const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
+      self.hashedPassword = await bcrypt.hash(self._password, salt);
+      delete self._password;
     } catch (error: any) {
       throw error;
     }
+  } else if (self.isModified("hashedPassword")) {
+    // Hash if set directly and not hashed
+    if (!self.hashedPassword.startsWith("$2a$") && !self.hashedPassword.startsWith("$2b$")) {
+      try {
+        const salt = await bcrypt.genSalt(10);
+        self.hashedPassword = await bcrypt.hash(self.hashedPassword, salt);
+      } catch (error: any) {
+        throw error;
+      }
+    }
+  }
+
+  // Deduce plan or duration if modified
+  if (self.isModified("membershipDuration") && !self.isModified("membershipPlan")) {
+    const dur = self.membershipDuration;
+    if (dur === 1) self.membershipPlan = "Monthly";
+    else if (dur === 3) self.membershipPlan = "Quarterly";
+    else if (dur === 6) self.membershipPlan = "Half-Yearly";
+    else if (dur === 12) self.membershipPlan = "Annual";
+  } else if (self.isModified("membershipPlan") && !self.isModified("membershipDuration")) {
+    const plan = self.membershipPlan;
+    if (plan === "Monthly") self.membershipDuration = 1;
+    else if (plan === "Quarterly") self.membershipDuration = 3;
+    else if (plan === "Half-Yearly") self.membershipDuration = 6;
+    else if (plan === "Annual") self.membershipDuration = 12;
   }
 
   // Calculate Expiry Date
-  if (this.isModified("membershipDuration") || this.isModified("joinDate") || !this.membershipExpiry) {
-    this.membershipExpiry = addMonths(this.joinDate || new Date(), this.membershipDuration);
+  if (self.isModified("membershipDuration") || self.isModified("membershipPlan") || self.isModified("membershipStartDate") || !self.membershipEndDate) {
+    const startDate = self.membershipStartDate || new Date();
+    const dur = self.membershipDuration || 1;
+    self.membershipEndDate = addMonths(startDate, dur);
   }
 
   // Calculate Remaining Amount
-  this.remainingAmount = Math.max(0, this.totalFee - this.totalPaid);
+  self.remainingAmount = Math.max(0, self.totalFee - self.totalPaid);
 
-  // Automatically update status based on expiration (unless it's manually set to Suspended)
-  if (this.membershipStatus !== "Suspended") {
-    const daysLeft = differenceInDays(this.membershipExpiry, new Date());
+  // Set Payment Status
+  if (self.totalPaid >= self.totalFee) {
+    self.paymentStatus = "Paid";
+  } else if (self.totalPaid > 0) {
+    self.paymentStatus = "Partially Paid";
+  } else {
+    self.paymentStatus = "Unpaid";
+  }
+
+  // Automatically update status based on expiration (unless it's manually set to Suspended or isActive is false)
+  if (self.membershipStatus === "Suspended" || !self.isActive) {
+    self.membershipStatus = "Suspended";
+  } else {
+    const daysLeft = differenceInDays(self.membershipEndDate, new Date());
     if (daysLeft < 0) {
-      this.membershipStatus = "Expired";
+      self.membershipStatus = "Expired";
     } else if (daysLeft <= 10) {
-      this.membershipStatus = "Expiring Soon";
+      self.membershipStatus = "Expiring Soon";
     } else {
-      this.membershipStatus = "Active";
+      self.membershipStatus = "Active";
     }
   }
 });
 
 // Compare password method
 MemberSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
-  return bcrypt.compare(password, this.password);
+  const hash = this.hashedPassword || this.password || "";
+  return bcrypt.compare(password, hash);
 };
 
 export default mongoose.models.Member || mongoose.model("Member", MemberSchema);
+

@@ -3,14 +3,14 @@ import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import Payment from "@/models/Payment";
 import { uploadImage } from "@/lib/cloudinary";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError } from "@/utils/response";
 
 // GET /api/members (All members with search, filters, and pagination)
 export async function GET(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 
@@ -28,8 +28,11 @@ export async function GET(req: NextRequest) {
 
     if (search) {
       query.$or = [
+        { name: { $regex: search, $options: "i" } },
         { fullName: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
         { phoneNumber: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -42,7 +45,7 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("-password");
+      .select("-password -hashedPassword");
 
     return sendSuccess("Members list retrieved", {
       members,
@@ -58,28 +61,49 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/members (Admin adds a member - generates password automatically)
+// POST /api/members (Admin adds a member)
 export async function POST(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 
     await connectToDatabase();
-    const { fullName, phoneNumber, address, email, totalFee, membershipDuration, totalPaid, profileImage } = await req.json();
+    const { 
+      fullName, name, 
+      phoneNumber, phone, 
+      address, email, 
+      password, membershipPlan,
+      totalFee, membershipDuration, 
+      totalPaid, profileImage 
+    } = await req.json();
 
-    if (!fullName || !phoneNumber || !address || !totalFee || !membershipDuration) {
-      return sendError("All fields are required", null, 400);
+    const mName = name || fullName;
+    const mPhone = phone || phoneNumber;
+
+    if (!mName || !mPhone || !address || !totalFee || !email) {
+      return sendError("All fields (Name, Phone, Email, Address, Fee) are required", null, 400);
     }
 
-    const existingMember = await Member.findOne({ phoneNumber });
+    // Check duplicate phone or email
+    const existingMember = await Member.findOne({
+      $or: [
+        { phone: mPhone },
+        { phoneNumber: mPhone },
+        { email: email.toLowerCase() }
+      ]
+    });
+
     if (existingMember) {
+      if (existingMember.email === email.toLowerCase()) {
+        return sendError("Email address is already registered", null, 400);
+      }
       return sendError("Phone number is already registered", null, 400);
     }
 
-    // Auto-generate temp password based on phone number
-    const tempPassword = `ON-${phoneNumber.slice(-4)}`;
+    // Generate password or use custom
+    const finalPassword = password || `ON-${mPhone.slice(-4)}`;
 
     // Handle Profile Image Upload (from base64 format)
     let profileImageUrl = "https://ui-avatars.com/api/?name=Gym+Member&background=random";
@@ -95,16 +119,19 @@ export async function POST(req: NextRequest) {
     }
 
     const member = await Member.create({
-      fullName,
-      phoneNumber,
-      email: email || `${phoneNumber}@onfitness.com`,
+      name: mName,
+      phone: mPhone,
+      email: email.toLowerCase(),
       address,
-      password: tempPassword, // save hook handles hashing
+      password: finalPassword, // pre-save hook handles hashing
       profileImage: profileImageUrl,
+      membershipPlan: membershipPlan || "Monthly",
+      membershipDuration: membershipDuration || 1,
       totalFee,
-      membershipDuration,
       totalPaid: totalPaid || 0,
-      mustChangePassword: true, // Force onboarding password reset on login
+      isActive: true,
+      createdByAdmin: decoded.id,
+      mustChangePassword: password ? false : true,
     });
 
     // Create payment entry if totalPaid is greater than 0
@@ -124,7 +151,8 @@ export async function POST(req: NextRequest) {
         id: member._id,
         fullName: member.fullName,
         phoneNumber: member.phoneNumber,
-        tempPassword,
+        email: member.email,
+        tempPassword: password ? null : finalPassword,
       },
     }, 201);
   } catch (error) {

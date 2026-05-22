@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Gallery from "@/models/Gallery";
 import { deleteImage } from "@/lib/cloudinary";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendNotFound, sendError } from "@/utils/response";
 
 // DELETE /api/gallery/:id (Admin deletes a gallery image, synchronized with Cloudinary)
@@ -10,7 +10,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
   try {
     const params = await props.params;
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 

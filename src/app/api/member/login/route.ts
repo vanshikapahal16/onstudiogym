@@ -37,11 +37,19 @@ export async function POST(req: NextRequest) {
 
     // Try finding by email or phone
     const member = await Member.findOne({
-      $or: [{ email: loginId.toLowerCase() }, { phoneNumber: loginId }],
+      $or: [
+        { email: loginId.toLowerCase() },
+        { phone: loginId },
+        { phoneNumber: loginId }
+      ],
     });
 
     if (!member) {
       return sendError("Invalid phone number or email. Account not found.", null, 401);
+    }
+
+    if (!member.isActive || member.membershipStatus === "Suspended") {
+      return sendError("Access Denied: Your membership is currently suspended. Please contact administration.", null, 403);
     }
 
     const isMatch = await member.comparePassword(password);
@@ -52,8 +60,8 @@ export async function POST(req: NextRequest) {
     let response = sendSuccess("Login successful", {
       member: {
         id: member._id,
-        fullName: member.fullName,
-        phoneNumber: member.phoneNumber,
+        fullName: member.fullName || member.name,
+        phoneNumber: member.phoneNumber || member.phone,
         email: member.email,
         mustChangePassword: member.mustChangePassword,
         role: member.role,

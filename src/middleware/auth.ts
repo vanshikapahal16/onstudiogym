@@ -6,7 +6,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "on_fitness_secret_key";
 
 export interface DecodedToken {
   id: string;
-  role: "admin" | "member";
+  role: "superadmin" | "admin" | "member";
+}
+
+// Helper to check if a decoded token is an administrator role
+export function isAdmin(decoded: DecodedToken | null): boolean {
+  return !!decoded && (decoded.role === "admin" || decoded.role === "superadmin");
 }
 
 // Generate JWT token and set in cookie

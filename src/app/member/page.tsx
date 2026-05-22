@@ -205,60 +205,89 @@ export default function MemberDashboard() {
           </div>
         </motion.div>
 
-        {/* Recent Activity Log */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6 }}
-          className="glass-panel rounded-3xl p-6 border border-white/10 flex flex-col h-[400px]"
-        >
-          <h2 className="text-xl font-bold text-white mb-6">Recent Activity</h2>
+        {/* Right Column: Gym Pass & Recent Activity */}
+        <div className="space-y-8 lg:col-span-1">
+          {/* Gym Pass QR Code */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col items-center justify-center text-center relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-red-500/10 to-transparent opacity-50 pointer-events-none" />
+            <h2 className="text-xl font-bold text-white mb-2 relative z-10">Your Gym Pass</h2>
+            <p className="text-xs text-muted-foreground mb-4 relative z-10">Scan at the reception to check-in/out</p>
+            
+            <div className="relative p-3 bg-white rounded-2xl flex items-center justify-center mb-4 z-10 w-44 h-44 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+              {member && (
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${member._id}`}
+                  alt="Gym Pass QR Code"
+                  className="w-full h-full"
+                />
+              )}
+            </div>
+            
+            <div className="text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg z-10">
+              ID: {member?._id}
+            </div>
+          </motion.div>
 
-          <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
-            {attendance.length === 0 && payments.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center gap-2">
-                <Dumbbell className="w-8 h-8 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground">No recent fitness or payment activity logged</p>
-              </div>
-            ) : (
-              [
-                ...attendance.map((log) => ({
-                  type: "checkin",
-                  title: log.checkOut ? "Completed Workout" : "Checked In",
-                  subtitle: log.checkOut 
-                    ? `Session duration: ${getDurationText(log.duration)}`
-                    : "Active training session",
-                  date: new Date(log.checkIn),
-                  icon: log.checkOut ? <Dumbbell className="w-4 h-4 text-primary" /> : <Activity className="w-4 h-4 text-emerald-400" />
-                })),
-                ...payments.map((p) => ({
-                  type: "payment",
-                  title: `Payment: ₹${p.amount.toLocaleString()}`,
-                  subtitle: `Invoice: ${p.invoiceId}`,
-                  date: new Date(p.date),
-                  icon: <Receipt className="w-4 h-4 text-purple-400" />
-                }))
-              ]
-              .sort((a, b) => b.date.getTime() - a.date.getTime())
-              .slice(0, 5)
-              .map((activity, i, arr) => (
-                <div key={i} className="flex gap-4 relative">
-                  {i !== arr.length - 1 && <div className="absolute left-[19px] top-8 bottom-[-16px] w-0.5 bg-white/10"></div>}
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 z-10">
-                    {activity.icon}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-white">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{activity.subtitle}</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      {activity.date.toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                    </p>
-                  </div>
+          {/* Recent Activity Log */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+            className="glass-panel rounded-3xl p-6 border border-white/10 flex flex-col h-[400px]"
+          >
+            <h2 className="text-xl font-bold text-white mb-6">Recent Activity</h2>
+
+            <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+              {attendance.length === 0 && payments.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+                  <Dumbbell className="w-8 h-8 text-muted-foreground/30" />
+                  <p className="text-xs text-muted-foreground">No recent fitness or payment activity logged</p>
                 </div>
-              ))
-            )}
-          </div>
-        </motion.div>
+              ) : (
+                [
+                  ...attendance.map((log) => ({
+                    type: "checkin",
+                    title: log.checkOut ? "Completed Workout" : "Checked In",
+                    subtitle: log.checkOut 
+                      ? `Session duration: ${getDurationText(log.duration)}`
+                      : "Active training session",
+                    date: new Date(log.checkIn),
+                    icon: log.checkOut ? <Dumbbell className="w-4 h-4 text-primary" /> : <Activity className="w-4 h-4 text-emerald-400" />
+                  })),
+                  ...payments.map((p) => ({
+                    type: "payment",
+                    title: `Payment: ₹${p.amount.toLocaleString()}`,
+                    subtitle: `Invoice: ${p.invoiceId}`,
+                    date: new Date(p.date),
+                    icon: <Receipt className="w-4 h-4 text-purple-400" />
+                  }))
+                ]
+                .sort((a, b) => b.date.getTime() - a.date.getTime())
+                .slice(0, 5)
+                .map((activity, i, arr) => (
+                  <div key={i} className="flex gap-4 relative">
+                    {i !== arr.length - 1 && <div className="absolute left-[19px] top-8 bottom-[-16px] w-0.5 bg-white/10"></div>}
+                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 z-10">
+                      {activity.icon}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-white">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{activity.subtitle}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        {activity.date.toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

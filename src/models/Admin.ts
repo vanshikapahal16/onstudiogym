@@ -3,25 +3,37 @@ import bcrypt from "bcryptjs";
 
 const AdminSchema = new mongoose.Schema(
   {
-    fullName: {
+    name: {
       type: String,
-      required: [true, "Full name is required"],
+      required: [true, "Name is required"],
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
       unique: true,
       index: true,
       lowercase: true,
       trim: true,
+      sparse: true,
     },
-    password: {
+    phone: {
+      type: String,
+      required: [true, "Phone is required"],
+      unique: true,
+      index: true,
+      trim: true,
+    },
+    hashedPassword: {
       type: String,
       required: [true, "Password is required"],
     },
     role: {
       type: String,
+      enum: ["superadmin", "admin"],
       default: "admin",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     resetPasswordToken: {
       type: String,
@@ -33,20 +45,41 @@ const AdminSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Virtual for fullName for backward compatibility
+AdminSchema.virtual("fullName")
+  .get(function (this: any) {
+    return this.name;
+  })
+  .set(function (this: any, val: string) {
+    this.name = val;
+  });
+
+// Virtual for password setter/getter
+AdminSchema.virtual("password")
+  .set(function (this: any, password: string) {
+    this._password = password;
+  })
+  .get(function (this: any) {
+    return this._password;
+  });
+
 // Hash password before saving
-AdminSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-  try {
+AdminSchema.pre("save", async function (this: any) {
+  if (this._password) {
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  } catch (error: any) {
-    throw error;
+    this.hashedPassword = await bcrypt.hash(this._password, salt);
   }
 });
 
 // Compare password method
-AdminSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
-  return bcrypt.compare(password, this.password);
+AdminSchema.methods.comparePassword = async function (this: any, password: string): Promise<boolean> {
+  if (!this.hashedPassword) return false;
+  return bcrypt.compare(password, this.hashedPassword);
 };
 
+// Ensure virtual fields are serialized
+AdminSchema.set("toJSON", { virtuals: true });
+AdminSchema.set("toObject", { virtuals: true });
+
 export default mongoose.models.Admin || mongoose.model("Admin", AdminSchema);
+

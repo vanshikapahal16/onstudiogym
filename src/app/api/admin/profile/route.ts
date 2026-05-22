@@ -1,18 +1,18 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Admin from "@/models/Admin";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendNotFound, sendError } from "@/utils/response";
 
 export async function GET(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 
     await connectToDatabase();
-    const admin = await Admin.findById(decoded.id).select("-password");
+    const admin = await Admin.findById(decoded.id).select("-hashedPassword -password");
 
     if (!admin) {
       return sendNotFound("Admin not found");

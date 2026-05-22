@@ -3,14 +3,14 @@ import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import Attendance from "@/models/Attendance";
 import Payment from "@/models/Payment";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError } from "@/utils/response";
 import { subDays, startOfDay } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 

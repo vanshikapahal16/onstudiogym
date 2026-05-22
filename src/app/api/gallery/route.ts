@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Gallery from "@/models/Gallery";
 import { uploadImage, deleteImage } from "@/lib/cloudinary";
-import { verifyAuthToken } from "@/middleware/auth";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError, sendNotFound } from "@/utils/response";
 
 // GET /api/gallery (Public fetches gallery images)
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !isAdmin(decoded)) {
       return sendUnauthorized();
     }
 

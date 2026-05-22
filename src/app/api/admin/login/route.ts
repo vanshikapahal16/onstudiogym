@@ -12,25 +12,22 @@ export async function POST(req: NextRequest) {
     // Auto-run daily cron trigger when login is requested
     await runDailyAutomation();
 
-    const { email, password } = await req.json();
+    const { email, identifier: bodyIdentifier, password } = await req.json();
+    const identifier = (email || bodyIdentifier || "").trim();
 
-    if (!email || !password) {
-      return sendError("Please provide email and password", null, 400);
+    if (!identifier || !password) {
+      return sendError("Please provide email or phone number and password", null, 400);
     }
 
-    // Check if any admin exists. If not, seed a default admin for ease of setup!
-    const adminCount = await Admin.countDocuments();
-    if (adminCount === 0) {
-      await Admin.create({
-        fullName: "Super Admin",
-        email: "admin@gym.com",
-        password: "Admin@123", // This will be hashed automatically by the save hook
-      });
-    }
+    const admin = await Admin.findOne({
+      $or: [
+        { email: identifier.toLowerCase() },
+        { phone: identifier }
+      ]
+    });
 
-    const admin = await Admin.findOne({ email });
     if (!admin) {
-      return sendError("Invalid email address. Admin account not found.", null, 401);
+      return sendError("Invalid credentials. Admin account not found.", null, 401);
     }
 
     const isMatch = await admin.comparePassword(password);
@@ -38,17 +35,22 @@ export async function POST(req: NextRequest) {
       return sendError("Incorrect password. Please try again.", null, 401);
     }
 
+    if (!admin.isActive) {
+      return sendError("Your account has been deactivated. Please contact the owner.", null, 403);
+    }
+
     let response = sendSuccess("Login successful", {
       admin: {
         id: admin._id,
         fullName: admin.fullName,
         email: admin.email,
+        phone: admin.phone,
         role: admin.role,
       },
     });
 
-    // Attach HttpOnly cookie
-    response = setAuthCookie(response, { id: admin._id, role: "admin" });
+    // Attach HttpOnly cookie with their actual role (superadmin or admin)
+    response = setAuthCookie(response, { id: admin._id.toString(), role: admin.role });
     return response;
   } catch (error) {
     return sendError("Internal server error during login", error, 500);

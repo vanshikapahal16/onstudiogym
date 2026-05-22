@@ -1,13 +1,30 @@
 {
   "admins": [
     {
-      "_id": "6a0d71af48bdc2acb31c1043",
-      "fullName": "Super Admin",
-      "email": "admin@gym.com",
-      "password": "$2b$10$LlMW7WaE7RVqESNWeaUuqucwROGbNm4ozrGN5g.P7aKUw9G.Wh1r2",
+      "_id": "6a0d71af48bdc2acb31c1055",
+      "name": "Vanshika",
+      "fullName": "Vanshika",
+      "phone": "9588715527",
+      "email": "vanshikapahal16@gmail.com",
+      "password": "$2b$10$EvRaOIcWqj8FEsmIeNt0xOKUxIbqqQbJ9PoLNNPITnIwDHOxDBnom",
+      "hashedPassword": "$2b$10$EvRaOIcWqj8FEsmIeNt0xOKUxIbqqQbJ9PoLNNPITnIwDHOxDBnom",
+      "role": "superadmin",
+      "isActive": true,
+      "createdAt": "2026-05-22T12:06:10.883Z",
+      "updatedAt": "2026-05-22T12:06:10.886Z"
+    },
+    {
+      "_id": "6a0d71af48bdc2acb31c1056",
+      "name": "Sukchain",
+      "fullName": "Sukchain",
+      "phone": "8400050073",
+      "email": "sukchain@gmail.com",
+      "password": "$2b$10$egkc7PrgzH8NZ.UTCbJR4eC7je.yI3KAefjVH.8tjFVA8VdSrn/F.",
+      "hashedPassword": "$2b$10$egkc7PrgzH8NZ.UTCbJR4eC7je.yI3KAefjVH.8tjFVA8VdSrn/F.",
       "role": "admin",
-      "createdAt": "2026-05-20T08:32:47.080Z",
-      "updatedAt": "2026-05-20T08:32:47.164Z"
+      "isActive": true,
+      "createdAt": "2026-05-22T12:06:10.886Z",
+      "updatedAt": "2026-05-22T12:06:10.886Z"
     }
   ],
   "members": [
@@ -48,6 +65,32 @@
       "membershipStatus": "Active",
       "updatedAt": "2026-05-21T18:01:47.339Z",
       "createdAt": "2026-05-21T18:01:47.339Z"
+    },
+    {
+      "_id": "6a0d71af48bdc2acb31c1057",
+      "name": "Rahul",
+      "fullName": "Rahul",
+      "phone": "9999999999",
+      "phoneNumber": "9999999999",
+      "email": "rahul@gmail.com",
+      "address": "Delhi, India",
+      "password": "$2b$10$8Htd6BNDNbnP4TEkt8fGseFPcIcBJEz/2Qh8UrMmIVU3/ciGOLepi",
+      "hashedPassword": "$2b$10$8Htd6BNDNbnP4TEkt8fGseFPcIcBJEz/2Qh8UrMmIVU3/ciGOLepi",
+      "membershipPlan": "Gold",
+      "membershipDuration": 12,
+      "membershipStartDate": "2026-05-22T12:06:10.886Z",
+      "membershipEndDate": "2027-05-22T12:06:10.886Z",
+      "membershipExpiry": "2027-05-22T12:06:10.887Z",
+      "totalFee": 1000,
+      "totalPaid": 1000,
+      "remainingAmount": 0,
+      "membershipStatus": "Active",
+      "paymentStatus": "Paid",
+      "isActive": true,
+      "mustChangePassword": false,
+      "role": "member",
+      "createdAt": "2026-05-22T12:06:10.887Z",
+      "updatedAt": "2026-05-22T12:06:10.887Z"
     }
   ],
   "payments": [],

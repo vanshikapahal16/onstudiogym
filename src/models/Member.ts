@@ -39,7 +39,7 @@ const MemberSchema = new mongoose.Schema(
     },
     membershipPlan: {
       type: String,
-      enum: ["Monthly", "Quarterly", "Half-Yearly", "Annual"],
+      enum: ["Monthly", "Quarterly", "Half-Yearly", "Annual", "Gold"],
       default: "Monthly",
     },
     membershipStartDate: {
@@ -127,8 +127,8 @@ MemberSchema.virtual("password")
     this._password = val;
   });
 
-// Hash password & Automate fields before saving
-MemberSchema.pre("save", async function () {
+// Hash password & Automate fields before validation
+MemberSchema.pre("validate", async function () {
   const self = this as any;
   // Hash password if plain text was set on virtual
   if (self._password) {
@@ -164,6 +164,7 @@ MemberSchema.pre("save", async function () {
     else if (plan === "Quarterly") self.membershipDuration = 3;
     else if (plan === "Half-Yearly") self.membershipDuration = 6;
     else if (plan === "Annual") self.membershipDuration = 12;
+    else if (plan === "Gold") self.membershipDuration = 12;
   }
 
   // Calculate Expiry Date

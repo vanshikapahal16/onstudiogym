@@ -544,64 +544,80 @@ function initMockDatabase() {
   const data = getMockData();
   let dataChanged = false;
 
-  if (!data.admins || data.admins.length === 0) {
-    data.admins = [
-      {
-        _id: new mongoose.Types.ObjectId().toString(),
-        name: "Vanshika",
-        phone: "9588715527",
-        email: "vanshikapahal16@gmail.com",
-        password: "Vanshika@123",
-        hashedPassword: "", // will be hashed below
-        role: "superadmin",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        _id: new mongoose.Types.ObjectId().toString(),
-        name: "Sukchain",
-        phone: "8400050073",
-        password: "Sukchain@123",
-        hashedPassword: "", // will be hashed below
-        role: "admin",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
+  if (!data.admins) {
+    data.admins = [];
+  }
+  
+  // Filter out legacy admin
+  data.admins = data.admins.filter((a: any) => a.email !== "admin@gym.com" && a.phone);
+
+  const hasVanshika = data.admins.some((a: any) => a.phone === "9588715527");
+  const hasSukchain = data.admins.some((a: any) => a.phone === "8400050073");
+
+  if (!hasVanshika) {
+    data.admins.push({
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Vanshika",
+      phone: "9588715527",
+      email: "vanshikapahal16@gmail.com",
+      password: "Vanshika@123",
+      hashedPassword: "", // will be hashed below
+      role: "superadmin",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
     dataChanged = true;
   }
 
-  if (!data.members || data.members.length === 0) {
-    data.members = [
-      {
-        _id: new mongoose.Types.ObjectId().toString(),
-        name: "Gym Member",
-        fullName: "Gym Member",
-        phone: "9876543210",
-        phoneNumber: "9876543210",
-        email: "member@gym.com",
-        address: "123 Fitness Street",
-        password: "Member@123",
-        hashedPassword: "", // will be hashed below
-        membershipPlan: "Annual",
-        membershipDuration: 12,
-        membershipStartDate: new Date().toISOString(),
-        membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-        membershipExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-        totalFee: 500,
-        totalPaid: 500,
-        remainingAmount: 0,
-        membershipStatus: "Active",
-        paymentStatus: "Paid",
-        isActive: true,
-        mustChangePassword: false,
-        role: "member",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
+  if (!hasSukchain) {
+    data.admins.push({
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Sukchain",
+      phone: "8400050073",
+      email: "sukchain@gmail.com",
+      password: "Sukchain@123",
+      hashedPassword: "", // will be hashed below
+      role: "admin",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    dataChanged = true;
+  }
+
+  if (!data.members) {
+    data.members = [];
+  }
+
+  const hasRahul = data.members.some((m: any) => m.phone === "9999999999" || m.phoneNumber === "9999999999");
+  if (!hasRahul) {
+    data.members.push({
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Rahul",
+      fullName: "Rahul",
+      phone: "9999999999",
+      phoneNumber: "9999999999",
+      email: "rahul@gmail.com",
+      address: "Delhi, India",
+      password: "Rahul@123",
+      hashedPassword: "", // will be hashed below
+      membershipPlan: "Gold",
+      membershipDuration: 12,
+      membershipStartDate: new Date().toISOString(),
+      membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+      membershipExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+      totalFee: 1000,
+      totalPaid: 1000,
+      remainingAmount: 0,
+      membershipStatus: "Active",
+      paymentStatus: "Paid",
+      isActive: true,
+      mustChangePassword: false,
+      role: "member",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
     dataChanged = true;
   }
 
@@ -646,10 +662,41 @@ async function seedDatabaseIfEmpty() {
     const Admin = mongoose.models.Admin || require("@/models/Admin").default || require("@/models/Admin");
     const Member = mongoose.models.Member || require("@/models/Member").default || require("@/models/Member");
 
-    const adminCount = await Admin.countDocuments();
-    if (adminCount === 0) {
-      console.log("🌱 Seeding real database admins (Vanshika & Sukchain)...");
-      // Seed Vanshika
+    console.log("🌱 Verifying / Seeding real database records...");
+
+    // Drop legacy unique index if it exists on admins collection
+    try {
+      await Admin.collection.dropIndex("adminId_1");
+      console.log("🗑️ Successfully dropped legacy unique index: adminId_1");
+    } catch (e) {
+      // Index doesn't exist, ignore
+    }
+
+    // Clean up any corrupted/incomplete documents from older migrations
+    await Admin.deleteMany({
+      $or: [
+        { phone: { $exists: false } },
+        { name: { $exists: false } },
+        { phone: "" },
+        { name: "" }
+      ]
+    });
+
+    await Member.deleteMany({
+      $or: [
+        { phone: { $exists: false } },
+        { name: { $exists: false } },
+        { phone: "" },
+        { name: "" }
+      ]
+    });
+
+    // 1. Seed Vanshika
+    const existingVanshika = await Admin.findOne({
+      $or: [{ phone: "9588715527" }, { email: "vanshikapahal16@gmail.com" }]
+    });
+    if (!existingVanshika) {
+      console.log("🌱 Creating admin: Vanshika");
       await Admin.create({
         name: "Vanshika",
         phone: "9588715527",
@@ -658,35 +705,79 @@ async function seedDatabaseIfEmpty() {
         role: "superadmin",
         isActive: true,
       });
+    } else {
+      console.log("🌱 Admin Vanshika already exists. Updating credentials/role...");
+      existingVanshika.name = "Vanshika";
+      existingVanshika.phone = "9588715527";
+      existingVanshika.email = "vanshikapahal16@gmail.com";
+      existingVanshika.role = "superadmin";
+      existingVanshika.isActive = true;
+      existingVanshika.password = "Vanshika@123";
+      await existingVanshika.save();
+    }
 
-      // Seed Sukchain
+    // 2. Seed Sukchain
+    const existingSukchain = await Admin.findOne({
+      $or: [{ phone: "8400050073" }, { email: "sukchain@gmail.com" }]
+    });
+    if (!existingSukchain) {
+      console.log("🌱 Creating admin: Sukchain");
       await Admin.create({
         name: "Sukchain",
         phone: "8400050073",
+        email: "sukchain@gmail.com",
         password: "Sukchain@123",
         role: "admin",
         isActive: true,
       });
+    } else {
+      console.log("🌱 Admin Sukchain already exists. Updating credentials/role...");
+      existingSukchain.name = "Sukchain";
+      existingSukchain.phone = "8400050073";
+      existingSukchain.email = "sukchain@gmail.com";
+      existingSukchain.role = "admin";
+      existingSukchain.isActive = true;
+      existingSukchain.password = "Sukchain@123";
+      await existingSukchain.save();
     }
-    
-    const memberCount = await Member.countDocuments();
-    if (memberCount === 0) {
-      console.log("🌱 Seeding real database member...");
+
+    // 3. Seed Rahul
+    const existingRahul = await Member.findOne({
+      $or: [{ phone: "9999999999" }, { email: "rahul@gmail.com" }]
+    });
+    if (!existingRahul) {
+      console.log("🌱 Creating member: Rahul");
       await Member.create({
-        name: "Gym Member",
-        phone: "9876543210",
-        email: "member@gym.com",
-        address: "123 Fitness Street",
-        password: "Member@123",
-        membershipPlan: "Annual",
+        name: "Rahul",
+        phone: "9999999999",
+        email: "rahul@gmail.com",
+        address: "Delhi, India",
+        password: "Rahul@123",
+        membershipPlan: "Gold",
         membershipDuration: 12,
-        totalFee: 500,
-        totalPaid: 500,
+        totalFee: 1000,
+        totalPaid: 1000,
         mustChangePassword: false,
         isActive: true,
         role: "member",
       });
+    } else {
+      console.log("🌱 Member Rahul already exists. Updating credentials/plan...");
+      existingRahul.name = "Rahul";
+      existingRahul.phone = "9999999999";
+      existingRahul.email = "rahul@gmail.com";
+      existingRahul.address = "Delhi, India";
+      existingRahul.membershipPlan = "Gold";
+      existingRahul.membershipDuration = 12;
+      existingRahul.totalFee = 1000;
+      existingRahul.totalPaid = 1000;
+      existingRahul.mustChangePassword = false;
+      existingRahul.isActive = true;
+      existingRahul.password = "Rahul@123";
+      await existingRahul.save();
     }
+
+    console.log("🌱 Idempotent seeding completed successfully.");
   } catch (error) {
     console.error("❌ Failed to seed real database:", error);
   }

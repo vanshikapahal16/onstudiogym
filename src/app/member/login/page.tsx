@@ -80,7 +80,7 @@ function MemberLoginForm() {
             )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                <Phone className="w-4 h-4" /> Phone / Email
+                <Phone className="w-4 h-4" /> Email or Phone Number
               </label>
               <input 
                 type="text" 
@@ -88,7 +88,7 @@ function MemberLoginForm() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-red-500 transition-colors" 
-                placeholder="Enter phone or email" 
+                placeholder="Email or Phone Number" 
               />
             </div>
             

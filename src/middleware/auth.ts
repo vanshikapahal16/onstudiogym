@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { parse, serialize } from "cookie";
 
 const JWT_SECRET = process.env.JWT_SECRET || "on_fitness_secret_key";
 
@@ -18,7 +17,9 @@ export function isAdmin(decoded: DecodedToken | null): boolean {
 export function setAuthCookie<T = any>(res: NextResponse<T>, payload: DecodedToken): NextResponse<T> {
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
   
-  const serialized = serialize("token", token, {
+  res.cookies.set({
+    name: "token",
+    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -26,13 +27,14 @@ export function setAuthCookie<T = any>(res: NextResponse<T>, payload: DecodedTok
     path: "/",
   });
 
-  res.headers.append("Set-Cookie", serialized);
   return res;
 }
 
 // Clear JWT auth cookie
 export function clearAuthCookie<T = any>(res: NextResponse<T>): NextResponse<T> {
-  const serialized = serialize("token", "", {
+  res.cookies.set({
+    name: "token",
+    value: "",
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -40,15 +42,12 @@ export function clearAuthCookie<T = any>(res: NextResponse<T>): NextResponse<T> 
     path: "/",
   });
 
-  res.headers.append("Set-Cookie", serialized);
   return res;
 }
 
 // Verify auth token from request
 export function verifyAuthToken(req: NextRequest): DecodedToken | null {
-  const cookieHeader = req.headers.get("cookie") || "";
-  const cookies = parse(cookieHeader);
-  const token = cookies.token;
+  const token = req.cookies.get("token")?.value;
 
   if (!token) return null;
 

@@ -22,7 +22,7 @@ export async function runDailyAutomation() {
     const today = new Date();
 
     for (const member of members) {
-      const daysLeft = differenceInDays(member.membershipExpiry, today);
+      const daysLeft = differenceInDays(new Date(member.membershipExpiry), today);
       let updatedStatus = "Active";
 
       if (daysLeft < 0) {
@@ -41,7 +41,7 @@ export async function runDailyAutomation() {
           await Notification.create({
             userId: member._id,
             title: "Membership Expired",
-            message: `Hey ${member.fullName}, your membership expired on ${member.membershipExpiry.toLocaleDateString()}. Please renew!`,
+            message: `Hey ${member.fullName}, your membership expired on ${new Date(member.membershipExpiry).toLocaleDateString()}. Please renew!`,
             type: "expiry",
           });
         } else if (updatedStatus === "Expiring Soon") {
@@ -59,7 +59,7 @@ export async function runDailyAutomation() {
         // If payment is pending and membership is expired, mark Payment Overdue
         const payments = await Payment.find({ memberId: member._id });
         for (const payment of payments) {
-          if (payment.status === "Pending" && differenceInDays(today, member.joinDate) > 30) {
+          if (payment.status === "Pending" && differenceInDays(today, new Date(member.joinDate)) > 30) {
             payment.status = "Overdue";
             await payment.save();
 
@@ -76,7 +76,7 @@ export async function runDailyAutomation() {
 
       // 3. Inactive Member Retention Alert
       if (member.lastVisit) {
-        const daysSinceLastVisit = differenceInDays(today, member.lastVisit);
+        const daysSinceLastVisit = differenceInDays(today, new Date(member.lastVisit));
         if (daysSinceLastVisit >= 15) {
           // Check if notification already sent in the last 7 days
           const recentNotification = await Notification.findOne({

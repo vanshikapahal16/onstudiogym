@@ -63,8 +63,8 @@ AdminSchema.virtual("password")
     return this._password;
   });
 
-// Hash password before saving
-AdminSchema.pre("save", async function (this: any) {
+// Hash password before validation
+AdminSchema.pre("validate", async function (this: any) {
   if (this._password) {
     const salt = await bcrypt.genSalt(10);
     this.hashedPassword = await bcrypt.hash(this._password, salt);

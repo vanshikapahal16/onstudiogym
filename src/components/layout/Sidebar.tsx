@@ -17,6 +17,7 @@ import {
 
 const navItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Requests", href: "/admin/requests", icon: Users },
   { name: "Attendance", href: "/admin/attendance", icon: Clock },
   { name: "Members", href: "/admin/members", icon: Users },
   { name: "Payments", href: "/admin/payments", icon: CreditCard },

@@ -6,10 +6,11 @@ import { sendSuccess, sendError } from "@/utils/response";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
+    const params = await props.params;
     const requestId = params.id;
 
     const request = await PendingMember.findById(requestId);

@@ -22,6 +22,11 @@ export async function runDailyAutomation() {
     const today = new Date();
 
     for (const member of members) {
+      // Skip automated status updates for Pending or Suspended members
+      if (member.membershipStatus === "Pending" || member.membershipStatus === "Suspended") {
+        continue;
+      }
+
       const daysLeft = differenceInDays(new Date(member.membershipExpiry), today);
       let updatedStatus = "Active";
 

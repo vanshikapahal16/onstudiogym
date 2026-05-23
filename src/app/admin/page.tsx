@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   Users,
   Activity,
@@ -32,6 +33,7 @@ interface Stats {
   totalRevenue: number;
   pendingDues: number;
   inactiveMembersCount: number;
+  pendingMembers?: number;
 }
 
 interface Occupant {
@@ -174,6 +176,33 @@ export default function Dashboard() {
           Refresh Live Data
         </button>
       </div>
+
+      {/* Pending Signup Requests Banner */}
+      {stats && stats.pendingMembers && stats.pendingMembers > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel p-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-[0_0_20px_rgba(234,179,8,0.05)] animate-pulse-slow"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Pending Signup Requests</h4>
+              <p className="text-xs text-muted-foreground">
+                There are {stats.pendingMembers} prospective members waiting for approval.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/members?status=Pending"
+            className="px-4 py-2 rounded-xl bg-yellow-500 text-black hover:bg-yellow-400 text-xs font-bold transition-all shadow-[0_0_15px_rgba(234,179,8,0.2)] cursor-pointer"
+          >
+            Review Requests
+          </Link>
+        </motion.div>
+      ) : null}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

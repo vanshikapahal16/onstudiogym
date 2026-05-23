@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
       return sendError("Invalid phone number or email. Account not found.", null, 401);
     }
 
+    if (member.membershipStatus === "Pending") {
+      return sendError("Your signup request is pending approval. Once approved, you can log in using your 4-digit passcode.", null, 403);
+    }
+
     if (!member.isActive || member.membershipStatus === "Suspended") {
       return sendError("Access Denied: Your membership is currently suspended. Please contact administration.", null, 403);
     }

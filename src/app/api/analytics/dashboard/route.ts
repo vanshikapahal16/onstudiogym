@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     const activeMembers = await Member.countDocuments({ membershipStatus: "Active" });
     const expiringMembers = await Member.countDocuments({ membershipStatus: "Expiring Soon" });
     const expiredMembers = await Member.countDocuments({ membershipStatus: "Expired" });
+    const pendingMembers = await Member.countDocuments({ membershipStatus: "Pending" });
 
     // 2. Real-Time Occupancy & Attendance
     const currentOccupancy = await Attendance.countDocuments({ checkOut: null });
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
         totalRevenue,
         pendingDues,
         inactiveMembersCount,
+        pendingMembers,
       },
       liveOccupancy,
     });

@@ -37,7 +37,7 @@ interface Member {
   totalFee: number;
   totalPaid: number;
   remainingAmount: number;
-  membershipStatus: "Active" | "Expiring Soon" | "Expired" | "Suspended";
+  membershipStatus: "Active" | "Expiring Soon" | "Expired" | "Suspended" | "Pending";
   profileImage?: string;
 }
 
@@ -73,7 +73,7 @@ export default function MembersPage() {
 
   // Profile image (base64) & Manual status override
   const [profileImage, setProfileImage] = useState("");
-  const [membershipStatus, setMembershipStatus] = useState<"Active" | "Expiring Soon" | "Expired" | "Suspended">("Active");
+  const [membershipStatus, setMembershipStatus] = useState<"Active" | "Expiring Soon" | "Expired" | "Suspended" | "Pending">("Active");
 
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -84,6 +84,25 @@ export default function MembersPage() {
   const [customPassword, setCustomPassword] = useState("");
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+
+  // Approval states
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approveEmail, setApproveEmail] = useState("");
+  const [approvePasskey, setApprovePasskey] = useState("");
+  const [approveMonths, setApproveMonths] = useState("1");
+  const [approveFee, setApproveFee] = useState("1000");
+  const [approvePaid, setApprovePaid] = useState("1000");
+
+  // URL status filter detection
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const statusParam = params.get("status");
+      if (statusParam) {
+        setStatusFilter(statusParam);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchMembers();
@@ -385,6 +404,61 @@ export default function MembersPage() {
     setActiveDropdown(null);
   };
 
+  const openApproveModal = (member: Member) => {
+    setSelectedMember(member);
+    setApproveEmail(member.email || "");
+    setApprovePasskey("");
+    setApproveMonths("1");
+    setApproveFee("1000");
+    setApprovePaid("1000");
+    setFormError("");
+    setIsApproveModalOpen(true);
+    setActiveDropdown(null);
+  };
+
+  const handleApproveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMember) return;
+
+    if (!/^\d{4}$/.test(approvePasskey)) {
+      setFormError("Passcode must be exactly 4 numeric digits.");
+      return;
+    }
+
+    setFormError("");
+    setSubmitting(true);
+
+    try {
+      const planName = approveMonths === "1" ? "Monthly" : approveMonths === "3" ? "Quarterly" : approveMonths === "6" ? "Half-Yearly" : "Annual";
+      const res = await fetch(`/api/members/${selectedMember._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: approveEmail || undefined,
+          password: approvePasskey,
+          membershipStatus: "Active",
+          membershipPlan: planName,
+          membershipDuration: parseInt(approveMonths),
+          totalFee: parseFloat(approveFee),
+          totalPaid: parseFloat(approvePaid),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to approve member");
+      }
+
+      setIsApproveModalOpen(false);
+      setSelectedMember(null);
+      fetchMembers();
+    } catch (error: any) {
+      setFormError(error.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember) return;
@@ -453,6 +527,8 @@ export default function MembersPage() {
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
       case "Suspended":
         return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+      case "Pending":
+        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
       default:
         return "bg-red-500/10 text-red-500 border-red-500/20";
     }
@@ -489,6 +565,7 @@ export default function MembersPage() {
               <option value="Active" className="bg-[#0B0F19]">Active</option>
               <option value="Expiring Soon" className="bg-[#0B0F19]">Expiring Soon</option>
               <option value="Expired" className="bg-[#0B0F19]">Expired</option>
+              <option value="Pending" className="bg-[#0B0F19]">Pending Approvals</option>
             </select>
           </div>
         </div>
@@ -555,8 +632,16 @@ export default function MembersPage() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <p className="text-sm text-white">Join: {new Date(member.joinDate).toLocaleDateString()}</p>
-                        <p className="text-xs text-muted-foreground">Expires: {new Date(member.membershipExpiry).toLocaleDateString()}</p>
+                        {member.membershipStatus === "Pending" ? (
+                          <span className="text-xs text-muted-foreground italic flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {member.address}
+                          </span>
+                        ) : (
+                          <>
+                            <p className="text-sm text-white">Join: {new Date(member.joinDate).toLocaleDateString()}</p>
+                            <p className="text-xs text-muted-foreground">Expires: {new Date(member.membershipExpiry).toLocaleDateString()}</p>
+                          </>
+                        )}
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(member.membershipStatus)}`}>
@@ -565,84 +650,108 @@ export default function MembersPage() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Paid:</span>
-                            <span className="text-xs text-primary font-bold">₹{member.totalPaid.toLocaleString()}</span>
+                        {member.membershipStatus === "Pending" ? (
+                          <span className="text-xs text-muted-foreground italic">Pending Approval</span>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Paid:</span>
+                              <span className="text-xs text-primary font-bold">₹{member.totalPaid.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Dues:</span>
+                              <span className={`text-xs font-bold ${member.remainingAmount > 0 ? "text-yellow-500" : "text-emerald-500"}`}>
+                                ₹{member.remainingAmount.toLocaleString()}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Dues:</span>
-                            <span className={`text-xs font-bold ${member.remainingAmount > 0 ? "text-yellow-500" : "text-emerald-500"}`}>
-                              ₹{member.remainingAmount.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </td>
                       <td className="p-4 text-right relative">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            title="Record Payment"
-                            onClick={() => openPayModal(member)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20 text-muted-foreground transition-colors cursor-pointer"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Renew Membership"
-                            onClick={() => openRenewModal(member)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-[#6366F1]/10 hover:text-[#818CF8] hover:border-[#6366F1]/20 text-muted-foreground transition-colors cursor-pointer"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Edit Member"
-                            onClick={() => openEditModal(member)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-muted-foreground transition-colors cursor-pointer"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Reset Password"
-                            onClick={() => openResetPasswordModal(member)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/20 text-muted-foreground transition-colors cursor-pointer"
-                          >
-                            <Key className="w-4 h-4" />
-                          </button>
-                          <button
-                            title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Suspend Member"}
-                            onClick={() => handleToggleSuspend(member)}
-                            className={`p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground transition-colors cursor-pointer ${
-                              member.membershipStatus === "Suspended"
-                                ? "hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20"
-                                : "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
-                            }`}
-                          >
-                            <Ban className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Delete Member"
-                            onClick={() => openDeleteModal(member)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-muted-foreground transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          
-                          {/* Fast Attendance */}
-                          <div className="h-6 w-[1px] bg-white/10 mx-1" />
-                          <button
-                            onClick={() => handleCheckIn(member._id)}
-                            title="Quick Check-In"
-                            className="p-2 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary text-black transition-colors text-xs font-bold cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleCheckOut(member._id)}
-                            title="Quick Check-Out"
-                            className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black text-yellow-500 transition-colors text-xs font-bold cursor-pointer"
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                          </button>
+                          {member.membershipStatus === "Pending" ? (
+                            <>
+                              <button
+                                onClick={() => openApproveModal(member)}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" /> Approve
+                              </button>
+                              <button
+                                title="Delete Request"
+                                onClick={() => openDeleteModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                title="Record Payment"
+                                onClick={() => openPayModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                              </button>
+                              <button
+                                title="Renew Membership"
+                                onClick={() => openRenewModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-[#6366F1]/10 hover:text-[#818CF8] hover:border-[#6366F1]/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                              <button
+                                title="Edit Member"
+                                onClick={() => openEditModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                title="Reset Password"
+                                onClick={() => openResetPasswordModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
+                              <button
+                                title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Suspend Member"}
+                                onClick={() => handleToggleSuspend(member)}
+                                className={`p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground transition-colors cursor-pointer ${
+                                  member.membershipStatus === "Suspended"
+                                    ? "hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20"
+                                    : "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
+                                }`}
+                              >
+                                <Ban className="w-4 h-4" />
+                              </button>
+                              <button
+                                title="Delete Member"
+                                onClick={() => openDeleteModal(member)}
+                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-muted-foreground transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              
+                              {/* Fast Attendance */}
+                              <div className="h-6 w-[1px] bg-white/10 mx-1" />
+                              <button
+                                onClick={() => handleCheckIn(member._id)}
+                                title="Quick Check-In"
+                                className="p-2 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary text-black transition-colors text-xs font-bold cursor-pointer"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleCheckOut(member._id)}
+                                title="Quick Check-Out"
+                                className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black text-yellow-500 transition-colors text-xs font-bold cursor-pointer"
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -680,84 +789,109 @@ export default function MembersPage() {
                 </div>
 
                 {/* Info Fields Grid */}
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">Membership</span>
-                    <span className="text-xs text-white">Join: {new Date(member.joinDate).toLocaleDateString()}</span>
-                    <span className="text-[10px] text-muted-foreground block">Exp: {new Date(member.membershipExpiry).toLocaleDateString()}</span>
+                {member.membershipStatus === "Pending" ? (
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">Prospect Details</span>
+                    <span className="text-xs text-white block flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {member.address}</span>
+                    <span className="text-xs text-muted-foreground block italic">Pending Signup Request</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">Financial Dues</span>
-                    <span className="text-xs text-primary font-semibold block">Paid: ₹{member.totalPaid.toLocaleString()}</span>
-                    <span className={`text-xs font-semibold block ${member.remainingAmount > 0 ? "text-yellow-500" : "text-emerald-500"}`}>
-                      Remaining: ₹{member.remainingAmount.toLocaleString()}
-                    </span>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">Membership</span>
+                      <span className="text-xs text-white">Join: {new Date(member.joinDate).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-muted-foreground block">Exp: {new Date(member.membershipExpiry).toLocaleDateString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">Financial Dues</span>
+                      <span className="text-xs text-primary font-semibold block">Paid: ₹{member.totalPaid.toLocaleString()}</span>
+                      <span className={`text-xs font-semibold block ${member.remainingAmount > 0 ? "text-yellow-500" : "text-emerald-500"}`}>
+                        Remaining: ₹{member.remainingAmount.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Touch Actions */}
-                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/5">
-                  <button
-                    onClick={() => handleCheckIn(member._id)}
-                    className="py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary active:text-black transition-all"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                    <span>Check-In</span>
-                  </button>
-                  <button
-                    onClick={() => handleCheckOut(member._id)}
-                    className="py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500 active:text-black transition-all"
-                  >
-                    <Clock className="w-4 h-4" />
-                    <span>Check-Out</span>
-                  </button>
-                  <button
-                    onClick={() => openPayModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-emerald-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-emerald-500/10"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    <span>Pay</span>
-                  </button>
-                  <button
-                    onClick={() => openRenewModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-indigo-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-indigo-500/10"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Renew</span>
-                  </button>
-                  <button
-                    onClick={() => openResetPasswordModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-yellow-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500/10"
-                  >
-                    <Key className="w-4 h-4" />
-                    <span>Reset Pass</span>
-                  </button>
-                  <button
-                    onClick={() => handleToggleSuspend(member)}
-                    className={`py-2 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-[10px] font-bold gap-1 transition-all ${
-                      member.membershipStatus === "Suspended"
-                        ? "text-emerald-400 active:bg-emerald-500/10"
-                        : "text-orange-400 active:bg-orange-500/10"
-                    }`}
-                  >
-                    <Ban className="w-4 h-4" />
-                    <span>{member.membershipStatus === "Suspended" ? "Activate" : "Suspend"}</span>
-                  </button>
-                  <button
-                    onClick={() => openEditModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-blue-500/10"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    onClick={() => openDeleteModal(member)}
-                    className="py-2 rounded-xl bg-white/5 border border-white/10 text-red-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-red-500/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
-                  </button>
-                </div>
+                {member.membershipStatus === "Pending" ? (
+                  <div className="flex gap-2 w-full pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => openApproveModal(member)}
+                      className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                    >
+                      <UserCheck className="w-4 h-4" /> Approve Request
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal(member)}
+                      className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-red-500 hover:bg-red-500/10 flex items-center justify-center cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => handleCheckIn(member._id)}
+                      className="py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary active:text-black transition-all"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      <span>Check-In</span>
+                    </button>
+                    <button
+                      onClick={() => handleCheckOut(member._id)}
+                      className="py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500 active:text-black transition-all"
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span>Check-Out</span>
+                    </button>
+                    <button
+                      onClick={() => openPayModal(member)}
+                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-emerald-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-emerald-500/10"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Pay</span>
+                    </button>
+                    <button
+                      onClick={() => openRenewModal(member)}
+                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-indigo-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-indigo-500/10"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Renew</span>
+                    </button>
+                    <button
+                      onClick={() => openResetPasswordModal(member)}
+                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-yellow-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500/10"
+                    >
+                      <Key className="w-4 h-4" />
+                      <span>Reset Pass</span>
+                    </button>
+                    <button
+                      onClick={() => handleToggleSuspend(member)}
+                      className={`py-2 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-[10px] font-bold gap-1 transition-all ${
+                        member.membershipStatus === "Suspended"
+                          ? "text-emerald-400 active:bg-emerald-500/10"
+                          : "text-orange-400 active:bg-orange-500/10"
+                      }`}
+                    >
+                      <Ban className="w-4 h-4" />
+                      <span>{member.membershipStatus === "Suspended" ? "Activate" : "Suspend"}</span>
+                    </button>
+                    <button
+                      onClick={() => openEditModal(member)}
+                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-blue-500/10"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal(member)}
+                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-red-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
@@ -1400,6 +1534,153 @@ export default function MembersPage() {
                     className="w-full py-4 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/95 transition-all shadow-[0_0_20px_rgba(0,255,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {submitting ? "Resetting..." : "Reset Password"}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal - Approve Member Request */}
+      <AnimatePresence>
+        {isApproveModalOpen && selectedMember && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-[#0B0F19] border border-white/10 rounded-3xl p-6 sm:p-8 relative my-8"
+            >
+              <button
+                onClick={() => setIsApproveModalOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-primary" /> Approve Signup Request
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Assign a membership plan and 4-digit passkey for <strong>{selectedMember.fullName}</strong>.
+                  </p>
+                </div>
+
+                {formError && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
+                    {formError}
+                  </div>
+                )}
+
+                <form onSubmit={handleApproveSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5" /> Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={approveEmail}
+                      onChange={(e) => setApproveEmail(e.target.value)}
+                      placeholder="Email Address"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1">
+                      <Key className="w-3.5 h-3.5" /> 4-Digit Passkey
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={4}
+                      pattern="\d{4}"
+                      value={approvePasskey}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, ""); // only digits
+                        setApprovePasskey(val);
+                      }}
+                      placeholder="e.g. 1234"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-mono tracking-widest text-center"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Provide this 4-digit numeric passcode to the user so they can log in.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
+                        Membership Plan
+                      </label>
+                      <select
+                        value={approveMonths}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setApproveMonths(val);
+                          // Auto set default pricing based on duration
+                          if (val === "1") {
+                            setApproveFee("1000");
+                            setApprovePaid("1000");
+                          } else if (val === "3") {
+                            setApproveFee("2500");
+                            setApprovePaid("2500");
+                          } else if (val === "6") {
+                            setApproveFee("4500");
+                            setApprovePaid("4500");
+                          } else if (val === "12") {
+                            setApproveFee("8000");
+                            setApprovePaid("8000");
+                          }
+                        }}
+                        className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
+                      >
+                        <option value="1">Monthly (1 Month)</option>
+                        <option value="3">Quarterly (3 Months)</option>
+                        <option value="6">Half-Yearly (6 Months)</option>
+                        <option value="12">Annual (12 Months)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
+                        Total Plan Fee (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={approveFee}
+                        onChange={(e) => setApproveFee(e.target.value)}
+                        placeholder="Fee"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
+                      Paid Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={approvePaid}
+                      onChange={(e) => setApprovePaid(e.target.value)}
+                      placeholder="Amount Paid"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 bg-[#10B981] hover:bg-emerald-400 text-black font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-2"
+                  >
+                    {submitting ? "Approving..." : "Approve & Activate"}
                   </button>
                 </form>
               </div>

@@ -154,16 +154,46 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
           else if (dur === 12) member.membershipPlan = "Annual";
         }
 
+        const oldStatus = member.membershipStatus;
+
         if (updates.totalFee !== undefined) member.totalFee = updates.totalFee;
-        if (updates.totalPaid !== undefined) member.totalPaid = updates.totalPaid;
+        
+        if (updates.totalPaid !== undefined) {
+          const oldPaid = member.totalPaid || 0;
+          member.totalPaid = updates.totalPaid;
+          
+          const newStatus = updates.membershipStatus || member.membershipStatus;
+          const isApproving = oldStatus === "Pending" && newStatus === "Active";
+          const diff = updates.totalPaid - oldPaid;
+          
+          if (diff > 0 && (isApproving || oldStatus !== "Pending")) {
+            const feeToCheck = updates.totalFee !== undefined ? updates.totalFee : member.totalFee;
+            const remaining = Math.max(0, feeToCheck - updates.totalPaid);
+            const paymentStatus = remaining === 0 ? "Paid" : "Partially Paid";
+            
+            await Payment.create({
+              memberId: member._id,
+              amount: diff,
+              invoiceId: `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+              status: paymentStatus,
+              date: new Date(),
+            });
+          }
+        }
         
         if (updates.membershipStatus) {
           member.membershipStatus = updates.membershipStatus;
-          if (updates.membershipStatus === "Suspended") {
+          if (updates.membershipStatus === "Suspended" || updates.membershipStatus === "Pending") {
             member.isActive = false;
           } else {
             member.isActive = true;
           }
+        }
+
+        const isApproving = oldStatus === "Pending" && (updates.membershipStatus === "Active" || updates.membershipStatus === "Expiring Soon");
+        if (isApproving) {
+          member.membershipStartDate = new Date();
+          member.mustChangePassword = false; // Allow using passcode
         }
       }
 

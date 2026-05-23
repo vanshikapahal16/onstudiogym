@@ -71,7 +71,7 @@ const MemberSchema = new mongoose.Schema(
     },
     membershipStatus: {
       type: String,
-      enum: ["Active", "Expiring Soon", "Expired", "Suspended"],
+      enum: ["Active", "Expiring Soon", "Expired", "Suspended", "Pending"],
       default: "Active",
       index: true,
     },
@@ -186,9 +186,12 @@ MemberSchema.pre("validate", async function () {
     self.paymentStatus = "Unpaid";
   }
 
-  // Automatically update status based on expiration (unless it's manually set to Suspended or isActive is false)
-  if (self.membershipStatus === "Suspended" || !self.isActive) {
+  // Automatically update status based on expiration (unless it's Pending, manually set to Suspended, or isActive is false)
+  if (self.membershipStatus === "Pending") {
+    self.isActive = false;
+  } else if (self.membershipStatus === "Suspended" || !self.isActive) {
     self.membershipStatus = "Suspended";
+    self.isActive = false;
   } else {
     const daysLeft = differenceInDays(self.membershipEndDate, new Date());
     if (daysLeft < 0) {

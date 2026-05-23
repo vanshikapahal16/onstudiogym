@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { sendSuccess, sendError } from "@/utils/response";
 
+// GET /api/health - Diagnostic route to verify database connection and variables in Vercel
 export async function GET(req: NextRequest) {
   const diagnostics: any = {
     timestamp: new Date().toISOString(),

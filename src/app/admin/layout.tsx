@@ -1,47 +1,24 @@
-"use client";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import AdminClientLayout from "./AdminClientLayout";
 
-import Sidebar from "@/components/layout/Sidebar";
-import Topbar from "@/components/layout/Topbar";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { userId } = await auth();
 
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
+  if (userId) {
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses[0]?.emailAddress;
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+
+    if (!email || !adminEmails.includes(email.toLowerCase())) {
+      // Authenticated but not an admin! Force redirect to login with error
+      redirect("/admin/login?error=unauthorized");
+    }
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden bg-[#0B0F19] text-white">
-      {/* Sidebar with mobile toggle support */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-      {/* Backdrop overlay for mobile */}
-      {isSidebarOpen && (
-        <div
-          onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
-        />
-      )}
-
-      {/* Main container with responsive left margin */}
-      <div className="flex-1 lg:ml-64 flex flex-col h-screen overflow-hidden relative">
-        {/* Admin Background Effects */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/5 blur-[120px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
-        
-        <Topbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 relative z-10 custom-scrollbar">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  return <AdminClientLayout>{children}</AdminClientLayout>;
 }

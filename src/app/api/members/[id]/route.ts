@@ -4,21 +4,16 @@ import Member from "@/models/Member";
 import Payment from "@/models/Payment";
 import { uploadImage } from "@/lib/cloudinary";
 import { addMonths } from "date-fns";
-import { verifyAuthToken, isAdmin } from "@/middleware/auth";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { sendSuccess, sendUnauthorized, sendNotFound, sendError } from "@/utils/response";
 
 // GET /api/members/:id (Get Single Member)
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const decoded = verifyAuthToken(req);
-    if (!decoded) {
+    const { userId } = await auth();
+    if (!userId) {
       return sendUnauthorized();
-    }
-
-    // Block members from viewing other member profiles
-    if (decoded.role === "member" && decoded.id !== params.id) {
-      return sendUnauthorized("You cannot access another member's profile");
     }
 
     await connectToDatabase();
@@ -26,6 +21,23 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
     if (!member) {
       return sendNotFound("Member not found");
+    }
+
+    // Authorization check: members can only view their own profiles, admins can view any profile
+    const isOwner = member.clerkId === userId;
+    
+    const { sessionClaims } = await auth();
+    let emailAddress = (sessionClaims as any)?.email;
+    if (!emailAddress) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      emailAddress = user.emailAddresses[0]?.emailAddress;
+    }
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+
+    if (!isUserAdmin && !isOwner) {
+      return sendUnauthorized("You cannot access another member's profile");
     }
 
     return sendSuccess("Member details loaded", { member });
@@ -38,8 +50,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const decoded = verifyAuthToken(req);
-    if (!decoded) {
+    const { userId } = await auth();
+    if (!userId) {
       return sendUnauthorized();
     }
 
@@ -50,6 +62,23 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
     if (!member) {
       return sendNotFound("Member not found");
+    }
+
+    // Authorization check
+    const isOwner = member.clerkId === userId;
+    
+    const { sessionClaims } = await auth();
+    let emailAddress = (sessionClaims as any)?.email;
+    if (!emailAddress) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      emailAddress = user.emailAddresses[0]?.emailAddress;
+    }
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+
+    if (!isUserAdmin && !isOwner) {
+      return sendUnauthorized("Unauthorized modification attempt");
     }
 
     // Handle Profile Image Upload (from base64 format)
@@ -63,11 +92,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       }
     }
 
-    if (decoded.role === "member") {
-      if (decoded.id !== params.id) {
-        return sendUnauthorized("Unauthorized modification attempt");
-      }
-      
+    if (!isUserAdmin) {
       // Strict updates for members
       if (updates.phoneNumber || updates.phone) {
         member.phone = updates.phone || updates.phoneNumber;
@@ -85,15 +110,21 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       if (updates.address !== undefined) member.address = updates.address;
       if (updates.email !== undefined) member.email = updates.email.toLowerCase();
       
-      // Password reset functionality
-      if (updates.password) {
-        member.password = updates.password;
-        member.mustChangePassword = true; // reset forces password change on next login
+      // Update approved status if provided
+      if (updates.approved !== undefined) {
+        member.approved = updates.approved;
+        if (updates.approved) {
+          member.membershipActive = true;
+          member.isActive = true;
+          member.membershipStatus = "Active";
+          member.membershipStartDate = new Date();
+        }
       }
 
       // Check Active/Suspend toggle
       if (updates.isActive !== undefined) {
         member.isActive = updates.isActive;
+        member.membershipActive = updates.isActive;
         if (!updates.isActive) {
           member.membershipStatus = "Suspended";
         } else {
@@ -122,6 +153,8 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
         member.membershipEndDate = addMonths(member.membershipStartDate, renewMonths);
         member.membershipStatus = "Active";
         member.isActive = true;
+        member.approved = true;
+        member.membershipActive = true;
 
         // Create transaction history entry for this renewal
         if (renewPaid > 0) {
@@ -185,22 +218,27 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
           member.membershipStatus = updates.membershipStatus;
           if (updates.membershipStatus === "Suspended" || updates.membershipStatus === "Pending") {
             member.isActive = false;
+            member.membershipActive = false;
           } else {
             member.isActive = true;
+            member.membershipActive = true;
+            member.approved = true;
           }
         }
 
         const isApproving = oldStatus === "Pending" && (updates.membershipStatus === "Active" || updates.membershipStatus === "Expiring Soon");
         if (isApproving) {
           member.membershipStartDate = new Date();
-          member.mustChangePassword = false; // Allow using passcode
+          member.approved = true;
+          member.membershipActive = true;
+          member.isActive = true;
         }
       }
 
       if (profileImageUrl) member.profileImage = profileImageUrl;
     }
 
-    await member.save(); // Save hook re-calculates dues and expiry!
+    await member.save();
 
     return sendSuccess("Member updated successfully", {
       member: {
@@ -215,6 +253,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       },
     });
   } catch (error) {
+    console.error("Failed to update member details:", error);
     return sendError("Failed to update member", error, 500);
   }
 }
@@ -223,8 +262,23 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const decoded = verifyAuthToken(req);
-    if (!decoded || !isAdmin(decoded)) {
+    const { userId } = await auth();
+    if (!userId) {
+      return sendUnauthorized();
+    }
+
+    // Check if the user is an admin
+    const { sessionClaims } = await auth();
+    let emailAddress = (sessionClaims as any)?.email;
+    if (!emailAddress) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      emailAddress = user.emailAddresses[0]?.emailAddress;
+    }
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+
+    if (!isUserAdmin) {
       return sendUnauthorized();
     }
 

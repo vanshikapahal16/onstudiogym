@@ -1,105 +1,107 @@
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { connectToDatabase } from "@/lib/db";
+import Member from "@/models/Member";
 
-/**
- * Decodes a JWT token safely in Next.js Edge/Proxy runtime without external dependencies.
- * Extracts and parses the JSON payload part of the token.
- * 
- * @param token - The raw JWT string (e.g. from cookies)
- * @returns The decoded payload object, or null if decoding fails
- */
-function decodeJwtPayload(token: string): any {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
+const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
+const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);
 
-    // The second part of a JWT is the Base64Url-encoded JSON payload
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    
-    // Decode Base64 to Unicode string
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    // Return null if token is malformed or invalid
-    return null;
+export const proxy = clerkMiddleware(async (auth, req) => {
+  const { pathname } = req.nextUrl;
+
+  // 1. Exclude public and auth assets
+  if (
+    pathname === "/member/login" ||
+    pathname === "/admin/login" ||
+    pathname === "/waiting-approval" ||
+    pathname === "/inactive" ||
+    pathname === "/" ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/health") ||
+    pathname.startsWith("/images")
+  ) {
+    return NextResponse.next();
   }
-}
 
-/**
- * Next.js 16 Proxy Convention
- * Acts as the centralized routing controller to protect admin and member dashboards.
- */
-export function proxy(request: NextRequest) {
-  try {
-    const { pathname } = request.nextUrl;
-    
-    // 1. Fetch and decode authentication cookie
-    const token = request.cookies.get("token")?.value;
-    const payload = token ? decodeJwtPayload(token) : null;
-
-    // ==========================================
-    // ADMIN PORTAL ROUTE PROTECTION
-    // ==========================================
-    if (pathname.startsWith("/admin")) {
-      const isAdminUser = payload && (payload.role === "admin" || payload.role === "superadmin");
-
-      // Case A: User goes to /admin/login
-      if (pathname === "/admin/login") {
-        if (isAdminUser) {
-          // If already logged in as admin, redirect to main admin dashboard
-          return NextResponse.redirect(new URL("/admin", request.url));
-        }
-        // Allow unauthenticated user to visit the login page
-        return NextResponse.next();
+  // 2. Member Route Protection (Page & API)
+  if (isMemberPageRoute(req) || isMemberApiRoute(req)) {
+    const { userId } = await auth();
+    if (!userId) {
+      if (isMemberApiRoute(req)) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
       }
+      return NextResponse.redirect(new URL("/member/login", req.url));
+    }
 
-      // Case B: User tries to access any other /admin/* dashboard page
-      if (!isAdminUser) {
-        // Redirect unauthorized users to login page
-        return NextResponse.redirect(new URL("/admin/login", request.url));
+    // Connect to database to validate status
+    await connectToDatabase();
+    const member = await Member.findOne({ clerkId: userId });
+
+    // Note: If no member record exists yet, we let page routes proceed to `/member` 
+    // where our Layout Server Component will automatically register them.
+    // However, if a record DOES exist, we enforce status checks.
+    if (member) {
+      if (!member.approved) {
+        if (isMemberApiRoute(req)) {
+          return new Response(JSON.stringify({ success: false, error: "Waiting for admin approval" }), { status: 403 });
+        }
+        return NextResponse.redirect(new URL("/waiting-approval", req.url));
+      }
+      if (!member.membershipActive) {
+        if (isMemberApiRoute(req)) {
+          return new Response(JSON.stringify({ success: false, error: "Membership suspended" }), { status: 403 });
+        }
+        return NextResponse.redirect(new URL("/inactive", req.url));
+      }
+    } else {
+      // If no member record exists and they call a member API, reject it
+      if (isMemberApiRoute(req)) {
+        return new Response(JSON.stringify({ success: false, error: "Account not registered" }), { status: 403 });
+      }
+    }
+  }
+
+  // 3. Admin Route Protection
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
+    const { userId } = await auth();
+    if (!userId) {
+      if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
+      }
+      return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+
+    // Enforce email check using Clerk
+    const { sessionClaims } = await auth();
+    let email = (sessionClaims as any)?.email;
+
+    if (!email) {
+      try {
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
+        email = user.emailAddresses[0]?.emailAddress;
+      } catch (err) {
+        console.error("Failed to fetch Clerk user details in proxy:", err);
       }
     }
 
-    // ==========================================
-    // MEMBER PORTAL ROUTE PROTECTION
-    // ==========================================
-    if (pathname.startsWith("/member")) {
-      const isMemberUser = payload && payload.role === "member";
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
 
-      // Case A: User goes to /member/login
-      if (pathname === "/member/login") {
-        if (isMemberUser) {
-          // If already logged in as member, redirect to main member dashboard
-          return NextResponse.redirect(new URL("/member", request.url));
-        }
-        // Allow unauthenticated user to visit the login page
-        return NextResponse.next();
+    if (!email || !adminEmails.includes(email.toLowerCase())) {
+      if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
+        return new Response(JSON.stringify({ success: false, error: "Forbidden: Admins only" }), { status: 403 });
       }
-
-      // Case B: User tries to access any other /member/* dashboard page
-      if (!isMemberUser) {
-        // Redirect unauthorized users to login page
-        return NextResponse.redirect(new URL("/member/login", request.url));
-      }
+      return NextResponse.redirect(new URL("/admin/login?error=unauthorized", req.url));
     }
-
-    // Allow all other public pages (e.g. landing page, assets, public routes)
-    return NextResponse.next();
-  } catch (error) {
-    // Robust stable fallback to prevent site crashes even if parsing/redirecting fails
-    console.error("Proxy runtime critical fallback error:", error);
-    return NextResponse.next();
   }
-}
 
-// Specify which pathnames this proxy will run on
+  return NextResponse.next();
+});
+
 export const config = {
-  matcher: ["/admin/:path*", "/member/:path*"],
+  matcher: [
+    // Skip static files, images, etc.
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  ],
 };

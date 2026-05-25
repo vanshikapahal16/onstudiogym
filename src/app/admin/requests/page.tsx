@@ -49,7 +49,7 @@ export default function RequestsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setPasskeyModal({ isOpen: true, passkey: data.data.passkey, name });
+        alert(`${name}'s request has been approved successfully!`);
         fetchRequests(); // Refresh the list
       } else {
         alert(data.message || "Failed to approve request");

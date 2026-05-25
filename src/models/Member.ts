@@ -4,6 +4,20 @@ import { addMonths, differenceInDays } from "date-fns";
 
 const MemberSchema = new mongoose.Schema(
   {
+    clerkId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+    membershipActive: {
+      type: Boolean,
+      default: false,
+    },
     name: {
       type: String,
       required: [true, "Name is required"],
@@ -12,8 +26,8 @@ const MemberSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, "Phone number is required"],
       unique: true,
+      sparse: true,
       alias: "phoneNumber",
       index: true,
     },
@@ -27,11 +41,9 @@ const MemberSchema = new mongoose.Schema(
     },
     hashedPassword: {
       type: String,
-      required: [true, "Password is required"],
     },
     address: {
       type: String,
-      required: [true, "Address is required"],
     },
     profileImage: {
       type: String,
@@ -54,12 +66,11 @@ const MemberSchema = new mongoose.Schema(
     },
     membershipDuration: {
       type: Number, // in months
-      required: [true, "Membership duration is required"],
       default: 1,
     },
     totalFee: {
       type: Number,
-      required: [true, "Total fee is required"],
+      default: 0,
     },
     totalPaid: {
       type: Number,
@@ -175,23 +186,28 @@ MemberSchema.pre("validate", async function () {
   }
 
   // Calculate Remaining Amount
-  self.remainingAmount = Math.max(0, self.totalFee - self.totalPaid);
+  self.remainingAmount = Math.max(0, (self.totalFee || 0) - (self.totalPaid || 0));
 
   // Set Payment Status
-  if (self.totalPaid >= self.totalFee) {
+  const fee = self.totalFee || 0;
+  const paid = self.totalPaid || 0;
+  if (paid >= fee) {
     self.paymentStatus = "Paid";
-  } else if (self.totalPaid > 0) {
+  } else if (paid > 0) {
     self.paymentStatus = "Partially Paid";
   } else {
     self.paymentStatus = "Unpaid";
   }
 
-  // Automatically update status based on expiration (unless it's Pending, manually set to Suspended, or isActive is false)
-  if (self.membershipStatus === "Pending") {
+  // Automatically update status based on approval and expiration
+  if (self.approved === false) {
+    self.membershipStatus = "Pending";
     self.isActive = false;
-  } else if (self.membershipStatus === "Suspended" || !self.isActive) {
+    self.membershipActive = false;
+  } else if (self.membershipActive === false || self.isActive === false) {
     self.membershipStatus = "Suspended";
     self.isActive = false;
+    self.membershipActive = false;
   } else {
     const daysLeft = differenceInDays(self.membershipEndDate, new Date());
     if (daysLeft < 0) {

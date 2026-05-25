@@ -21,7 +21,6 @@ import {
   Clock,
   UserCheck,
   RefreshCw,
-  Key,
   Ban,
 } from "lucide-react";
 
@@ -77,21 +76,7 @@ export default function MembersPage() {
 
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [tempPassword, setTempPassword] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-
-  // New features states
-  const [customPassword, setCustomPassword] = useState("");
-  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-
-  // Approval states
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [approveEmail, setApproveEmail] = useState("");
-  const [approvePasskey, setApprovePasskey] = useState("");
-  const [approveMonths, setApproveMonths] = useState("1");
-  const [approveFee, setApproveFee] = useState("1000");
-  const [approvePaid, setApprovePaid] = useState("1000");
 
   // URL status filter detection
   useEffect(() => {
@@ -160,7 +145,6 @@ export default function MembersPage() {
           totalFee: parseFloat(totalFee),
           totalPaid: parseFloat(totalPaid),
           profileImage: profileImage || undefined,
-          password: customPassword || undefined,
         }),
       });
 
@@ -169,8 +153,7 @@ export default function MembersPage() {
         throw new Error(data.message || "Failed to create member");
       }
 
-      setTempPassword(data.data.tempPassword || customPassword || "Custom Password Set");
-      // Wait for user to dismiss temporary password screen
+      setIsAddModalOpen(false);
       fetchMembers();
     } catch (error: any) {
       setFormError(error.message || "Something went wrong");
@@ -351,9 +334,7 @@ export default function MembersPage() {
     setTotalFee("");
     setTotalPaid("0");
     setProfileImage("");
-    setTempPassword("");
     setFormError("");
-    setCustomPassword("");
     setIsAddModalOpen(true);
   };
 
@@ -396,98 +377,24 @@ export default function MembersPage() {
     setActiveDropdown(null);
   };
 
-  const openResetPasswordModal = (member: Member) => {
-    setSelectedMember(member);
-    setNewPassword("");
-    setFormError("");
-    setIsResetPasswordModalOpen(true);
-    setActiveDropdown(null);
-  };
-
-  const openApproveModal = (member: Member) => {
-    setSelectedMember(member);
-    setApproveEmail(member.email || "");
-    setApprovePasskey("");
-    setApproveMonths("1");
-    setApproveFee("1000");
-    setApprovePaid("1000");
-    setFormError("");
-    setIsApproveModalOpen(true);
-    setActiveDropdown(null);
-  };
-
-  const handleApproveSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedMember) return;
-
-    if (!/^\d{4}$/.test(approvePasskey)) {
-      setFormError("Passcode must be exactly 4 numeric digits.");
-      return;
-    }
-
-    setFormError("");
-    setSubmitting(true);
+  const handleDirectApprove = async (member: Member) => {
+    if (!confirm(`Are you sure you want to approve ${member.fullName}?`)) return;
 
     try {
-      const planName = approveMonths === "1" ? "Monthly" : approveMonths === "3" ? "Quarterly" : approveMonths === "6" ? "Half-Yearly" : "Annual";
-      const res = await fetch(`/api/members/${selectedMember._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: approveEmail || undefined,
-          password: approvePasskey,
-          membershipStatus: "Active",
-          membershipPlan: planName,
-          membershipDuration: parseInt(approveMonths),
-          totalFee: parseFloat(approveFee),
-          totalPaid: parseFloat(approvePaid),
-        }),
+      const res = await fetch(`/api/admin/requests/${member._id}/approve`, {
+        method: "POST",
       });
-
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to approve member");
+
+      if (data.success) {
+        alert(`${member.fullName} has been approved successfully!`);
+        fetchMembers();
+      } else {
+        alert(data.message || "Failed to approve member");
       }
-
-      setIsApproveModalOpen(false);
-      setSelectedMember(null);
-      fetchMembers();
-    } catch (error: any) {
-      setFormError(error.message || "Something went wrong");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedMember) return;
-    setFormError("");
-    setSubmitting(true);
-
-    try {
-      const res = await fetch(`/api/members/${selectedMember._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to reset password");
-      }
-
-      alert("Password reset successfully! Force change password flag is active for their next login.");
-      setIsResetPasswordModalOpen(false);
-      setNewPassword("");
-      setSelectedMember(null);
-      fetchMembers();
-    } catch (error: any) {
-      setFormError(error.message || "Something went wrong");
-    } finally {
-      setSubmitting(false);
+    } catch (error) {
+      console.error("Failed to approve", error);
+      alert("An error occurred");
     }
   };
 
@@ -672,7 +579,7 @@ export default function MembersPage() {
                           {member.membershipStatus === "Pending" ? (
                             <>
                               <button
-                                onClick={() => openApproveModal(member)}
+                                onClick={() => handleDirectApprove(member)}
                                 className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                               >
                                 <UserCheck className="w-3.5 h-3.5" /> Approve
@@ -707,13 +614,6 @@ export default function MembersPage() {
                                 className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-muted-foreground transition-colors cursor-pointer"
                               >
                                 <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                title="Reset Password"
-                                onClick={() => openResetPasswordModal(member)}
-                                className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/20 text-muted-foreground transition-colors cursor-pointer"
-                              >
-                                <Key className="w-4 h-4" />
                               </button>
                               <button
                                 title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Suspend Member"}
@@ -816,7 +716,7 @@ export default function MembersPage() {
                 {member.membershipStatus === "Pending" ? (
                   <div className="flex gap-2 w-full pt-2 border-t border-white/5">
                     <button
-                      onClick={() => openApproveModal(member)}
+                      onClick={() => handleDirectApprove(member)}
                       className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                     >
                       <UserCheck className="w-4 h-4" /> Approve Request
@@ -857,13 +757,6 @@ export default function MembersPage() {
                     >
                       <RefreshCw className="w-4 h-4" />
                       <span>Renew</span>
-                    </button>
-                    <button
-                      onClick={() => openResetPasswordModal(member)}
-                      className="py-2 rounded-xl bg-white/5 border border-white/10 text-yellow-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500/10"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span>Reset Pass</span>
                     </button>
                     <button
                       onClick={() => handleToggleSuspend(member)}
@@ -921,7 +814,7 @@ export default function MembersPage() {
         </>
       )}
 
-      {/* Modal - Add Member / Temp Password Success */}
+      {/* Modal - Add Member */}
       <AnimatePresence>
         {isAddModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
@@ -938,186 +831,142 @@ export default function MembersPage() {
                 <X className="w-4 h-4" />
               </button>
 
-              {tempPassword ? (
-                /* Onboarding Success Screen */
-                <div className="text-center space-y-6 py-6">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(0,255,178,0.2)]">
-                    <CheckCircle2 className="w-8 h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">Member Onboarded!</h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      New membership profile has been logged in MongoDB.
-                    </p>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">TEMPORARY PASSWORD</span>
-                    <p className="text-2xl font-mono font-black text-primary tracking-wider">{tempPassword}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Give this to the member. They will be forced to change it on their first login.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setIsAddModalOpen(false);
-                      setTempPassword("");
-                    }}
-                    className="w-full py-3 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
-                  >
-                    Done & Refresh List
-                  </button>
+              {/* Registration Form */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white uppercase tracking-wider">Register New Member</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Add operational details below to register.</p>
                 </div>
-              ) : (
-                /* Registration Form */
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Register New Member</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Add operational details below to register.</p>
+
+                {formError && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
+                    {formError}
                   </div>
+                )}
 
-                  {formError && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
-                      {formError}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleAddSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-primary" /> Full Name
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Rahul Verma"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-primary" /> Phone Number
-                        </label>
-                        <input
-                          type="tel"
-                          required
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          placeholder="9876543210"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5 text-primary" /> Email (Optional)
-                        </label>
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="member@email.com"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-primary" /> Duration (Months)
-                        </label>
-                        <select
-                          value={membershipDuration}
-                          onChange={(e) => setMembershipDuration(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        >
-                          <option value="1" className="bg-[#0B0F19]">1 Month</option>
-                          <option value="3" className="bg-[#0B0F19]">3 Months</option>
-                          <option value="6" className="bg-[#0B0F19]">6 Months</option>
-                          <option value="12" className="bg-[#0B0F19]">12 Months</option>
-                        </select>
-                      </div>
-                    </div>
-
+                <form onSubmit={handleAddSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Address
+                        <User className="w-3.5 h-3.5 text-primary" /> Full Name
                       </label>
                       <input
                         type="text"
                         required
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="H-15, Sec 62, Noida"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Rahul Verma"
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
                       />
                     </div>
-
-                    <div>
-                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                        Profile Photo
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-primary text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-black hover:file:bg-primary/90 cursor-pointer"
-                      />
-                    </div>
-
                     <div>
                       <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-primary" /> Custom Password (Optional)
+                        <Phone className="w-3.5 h-3.5 text-primary" /> Phone Number
                       </label>
                       <input
-                        type="password"
-                        value={customPassword}
-                        onChange={(e) => setCustomPassword(e.target.value)}
-                        placeholder="Leave blank to auto-generate"
+                        type="tel"
+                        required
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="9876543210"
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
                       />
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <CreditCard className="w-3.5 h-3.5 text-primary" /> Total Fee (₹)
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          value={totalFee}
-                          onChange={(e) => setTotalFee(e.target.value)}
-                          placeholder="5000"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                          <CreditCard className="w-3.5 h-3.5 text-primary" /> Paid Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={totalPaid}
-                          onChange={(e) => setTotalPaid(e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-primary" /> Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="member@email.com"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
+                      />
                     </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-primary" /> Duration (Months)
+                      </label>
+                      <select
+                        value={membershipDuration}
+                        onChange={(e) => setMembershipDuration(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
+                      >
+                        <option value="1" className="bg-[#0B0F19]">1 Month</option>
+                        <option value="3" className="bg-[#0B0F19]">3 Months</option>
+                        <option value="6" className="bg-[#0B0F19]">6 Months</option>
+                        <option value="12" className="bg-[#0B0F19]">12 Months</option>
+                      </select>
+                    </div>
+                  </div>
 
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full py-4 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/95 transition-all shadow-[0_0_20px_rgba(0,255,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {submitting ? "Processing..." : "Confirm & Save"}
-                    </button>
-                  </form>
-                </div>
-              )}
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-primary" /> Address
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="H-15, Sec 62, Noida"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
+                      Profile Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-primary text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-black hover:file:bg-primary/90 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-primary" /> Total Fee (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={totalFee}
+                        onChange={(e) => setTotalFee(e.target.value)}
+                        placeholder="5000"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-primary" /> Paid Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={totalPaid}
+                        onChange={(e) => setTotalPaid(e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/95 transition-all shadow-[0_0_20px_rgba(0,255,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {submitting ? "Processing..." : "Confirm & Save"}
+                  </button>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1479,215 +1328,7 @@ export default function MembersPage() {
         )}
       </AnimatePresence>
 
-      {/* Modal - Reset Password */}
-      <AnimatePresence>
-        {isResetPasswordModalOpen && selectedMember && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md bg-[#0B0F19] border border-white/10 rounded-3xl p-6 sm:p-8 relative"
-            >
-              <button
-                onClick={() => setIsResetPasswordModalOpen(false)}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
 
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Key className="w-5 h-5 text-primary" /> Reset Password
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Set a new password for <strong>{selectedMember.fullName}</strong>.
-                  </p>
-                </div>
-
-                {formError && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
-                    {formError}
-                  </div>
-                )}
-
-                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new secure password"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-4 bg-primary text-black font-bold uppercase tracking-wider rounded-xl hover:bg-primary/95 transition-all shadow-[0_0_20px_rgba(0,255,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {submitting ? "Resetting..." : "Reset Password"}
-                  </button>
-                </form>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal - Approve Member Request */}
-      <AnimatePresence>
-        {isApproveModalOpen && selectedMember && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg bg-[#0B0F19] border border-white/10 rounded-3xl p-6 sm:p-8 relative my-8"
-            >
-              <button
-                onClick={() => setIsApproveModalOpen(false)}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-primary" /> Approve Signup Request
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Assign a membership plan and 4-digit passkey for <strong>{selectedMember.fullName}</strong>.
-                  </p>
-                </div>
-
-                {formError && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 text-xs font-medium">
-                    {formError}
-                  </div>
-                )}
-
-                <form onSubmit={handleApproveSubmit} className="space-y-4">
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5" /> Email Address
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={approveEmail}
-                      onChange={(e) => setApproveEmail(e.target.value)}
-                      placeholder="Email Address"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1">
-                      <Key className="w-3.5 h-3.5" /> 4-Digit Passkey
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={4}
-                      pattern="\d{4}"
-                      value={approvePasskey}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, ""); // only digits
-                        setApprovePasskey(val);
-                      }}
-                      placeholder="e.g. 1234"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-mono tracking-widest text-center"
-                    />
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Provide this 4-digit numeric passcode to the user so they can log in.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                        Membership Plan
-                      </label>
-                      <select
-                        value={approveMonths}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setApproveMonths(val);
-                          // Auto set default pricing based on duration
-                          if (val === "1") {
-                            setApproveFee("1000");
-                            setApprovePaid("1000");
-                          } else if (val === "3") {
-                            setApproveFee("2500");
-                            setApprovePaid("2500");
-                          } else if (val === "6") {
-                            setApproveFee("4500");
-                            setApprovePaid("4500");
-                          } else if (val === "12") {
-                            setApproveFee("8000");
-                            setApprovePaid("8000");
-                          }
-                        }}
-                        className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
-                      >
-                        <option value="1">Monthly (1 Month)</option>
-                        <option value="3">Quarterly (3 Months)</option>
-                        <option value="6">Half-Yearly (6 Months)</option>
-                        <option value="12">Annual (12 Months)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                        Total Plan Fee (₹)
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        value={approveFee}
-                        onChange={(e) => setApproveFee(e.target.value)}
-                        placeholder="Fee"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                      Paid Amount (₹)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={approvePaid}
-                      onChange={(e) => setApprovePaid(e.target.value)}
-                      placeholder="Amount Paid"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm font-semibold"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-4 bg-[#10B981] hover:bg-emerald-400 text-black font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-2"
-                  >
-                    {submitting ? "Approving..." : "Approve & Activate"}
-                  </button>
-                </form>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

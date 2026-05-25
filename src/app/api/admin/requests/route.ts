@@ -1,19 +1,27 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import PendingMember from "@/models/PendingMember";
+import Member from "@/models/Member";
 import { sendSuccess, sendError } from "@/utils/response";
 
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     
-    // Admin route, usually needs authentication check.
-    // Assuming middleware or the caller handles basic auth checks like other admin routes.
+    // Fetch all members waiting for approval
+    const requests = await Member.find({ approved: false }).sort({ createdAt: -1 });
 
-    const requests = await PendingMember.find().sort({ createdAt: -1 });
+    // Map them to the pending structure expected by the frontend
+    const mappedRequests = requests.map(m => ({
+      _id: m._id,
+      fullName: m.name,
+      phoneNumber: m.phone || "Google Sign Up",
+      email: m.email,
+      status: "Pending",
+      createdAt: m.createdAt
+    }));
 
     return sendSuccess("Sign up requests retrieved successfully", {
-      requests,
+      requests: mappedRequests,
     });
   } catch (error) {
     console.error("Fetch requests error:", error);

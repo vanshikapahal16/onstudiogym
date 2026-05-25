@@ -3,14 +3,29 @@ import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import Payment from "@/models/Payment";
 import { uploadImage } from "@/lib/cloudinary";
-import { verifyAuthToken, isAdmin } from "@/middleware/auth";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { sendSuccess, sendUnauthorized, sendError } from "@/utils/response";
 
 // GET /api/members (All members with search, filters, and pagination)
 export async function GET(req: NextRequest) {
   try {
-    const decoded = verifyAuthToken(req);
-    if (!decoded || !isAdmin(decoded)) {
+    const { userId } = await auth();
+    if (!userId) {
+      return sendUnauthorized();
+    }
+    
+    // Check if the user is an admin
+    const { sessionClaims } = await auth();
+    let emailAddress = (sessionClaims as any)?.email;
+    if (!emailAddress) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      emailAddress = user.emailAddresses[0]?.emailAddress;
+    }
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+
+    if (!isUserAdmin) {
       return sendUnauthorized();
     }
 
@@ -61,11 +76,26 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/members (Admin adds a member)
+// POST /api/members (Admin adds a member manually)
 export async function POST(req: NextRequest) {
   try {
-    const decoded = verifyAuthToken(req);
-    if (!decoded || !isAdmin(decoded)) {
+    const { userId } = await auth();
+    if (!userId) {
+      return sendUnauthorized();
+    }
+    
+    // Check if the user is an admin
+    const { sessionClaims } = await auth();
+    let emailAddress = (sessionClaims as any)?.email;
+    if (!emailAddress) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      emailAddress = user.emailAddresses[0]?.emailAddress;
+    }
+    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+
+    if (!isUserAdmin) {
       return sendUnauthorized();
     }
 
@@ -74,7 +104,7 @@ export async function POST(req: NextRequest) {
       fullName, name, 
       phoneNumber, phone, 
       address, email, 
-      password, membershipPlan,
+      membershipPlan,
       totalFee, membershipDuration, 
       totalPaid, profileImage 
     } = await req.json();
@@ -82,31 +112,18 @@ export async function POST(req: NextRequest) {
     const mName = name || fullName;
     const mPhone = phone || phoneNumber;
 
-    if (!mName || !mPhone || !address || !totalFee || !email) {
-      return sendError("All fields (Name, Phone, Email, Address, Fee) are required", null, 400);
+    if (!mName || !address || !email) {
+      return sendError("All fields (Name, Email, Address) are required", null, 400);
     }
 
-    // Check duplicate phone or email
-    const existingMember = await Member.findOne({
-      $or: [
-        { phone: mPhone },
-        { phoneNumber: mPhone },
-        { email: email.toLowerCase() }
-      ]
-    });
-
+    // Check duplicate email
+    const existingMember = await Member.findOne({ email: email.toLowerCase() });
     if (existingMember) {
-      if (existingMember.email === email.toLowerCase()) {
-        return sendError("Email address is already registered", null, 400);
-      }
-      return sendError("Phone number is already registered", null, 400);
+      return sendError("Email address is already registered", null, 400);
     }
-
-    // Generate password or use custom
-    const finalPassword = password || `ON-${mPhone.slice(-4)}`;
 
     // Handle Profile Image Upload (from base64 format)
-    let profileImageUrl = "https://ui-avatars.com/api/?name=Gym+Member&background=random";
+    let profileImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(mName)}&background=random`;
     if (profileImage && profileImage.startsWith("data:image/")) {
       try {
         const uploadResult = await uploadImage(profileImage);
@@ -120,18 +137,19 @@ export async function POST(req: NextRequest) {
 
     const member = await Member.create({
       name: mName,
-      phone: mPhone,
+      phone: mPhone || undefined,
       email: email.toLowerCase(),
       address,
-      password: finalPassword, // pre-save hook handles hashing
       profileImage: profileImageUrl,
       membershipPlan: membershipPlan || "Monthly",
       membershipDuration: membershipDuration || 1,
-      totalFee,
+      totalFee: totalFee || 0,
       totalPaid: totalPaid || 0,
+      approved: true,            // Pre-approved!
+      membershipActive: true,    // Pre-activated!
       isActive: true,
-      createdByAdmin: decoded.id,
-      mustChangePassword: password ? false : true,
+      membershipStatus: "Active",
+      mustChangePassword: false,
     });
 
     // Create payment entry if totalPaid is greater than 0
@@ -152,10 +170,11 @@ export async function POST(req: NextRequest) {
         fullName: member.fullName,
         phoneNumber: member.phoneNumber,
         email: member.email,
-        tempPassword: password ? null : finalPassword,
+        tempPassword: null,
       },
     }, 201);
   } catch (error) {
+    console.error("Failed to create member:", error);
     return sendError("Failed to create member", error, 500);
   }
 }

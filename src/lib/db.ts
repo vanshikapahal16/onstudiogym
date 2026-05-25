@@ -777,6 +777,42 @@ async function seedDatabaseIfEmpty() {
       await existingRahul.save();
     }
 
+    // 4. Seed Gym Member
+    const existingGymMember = await Member.findOne({
+      $or: [{ phone: "9876543210" }, { email: "member@gym.com" }]
+    });
+    if (!existingGymMember) {
+      console.log("🌱 Creating member: Gym Member");
+      await Member.create({
+        name: "Gym Member",
+        phone: "9876543210",
+        email: "member@gym.com",
+        address: "123 Fitness Street",
+        password: "Member@123",
+        membershipPlan: "Annual",
+        membershipDuration: 12,
+        totalFee: 500,
+        totalPaid: 500,
+        mustChangePassword: false,
+        isActive: true,
+        role: "member",
+      });
+    } else {
+      console.log("🌱 Member Gym Member already exists. Updating credentials/plan...");
+      existingGymMember.name = "Gym Member";
+      existingGymMember.phone = "9876543210";
+      existingGymMember.email = "member@gym.com";
+      existingGymMember.address = "123 Fitness Street";
+      existingGymMember.membershipPlan = "Annual";
+      existingGymMember.membershipDuration = 12;
+      existingGymMember.totalFee = 500;
+      existingGymMember.totalPaid = 500;
+      existingGymMember.mustChangePassword = false;
+      existingGymMember.isActive = true;
+      existingGymMember.password = "Member@123";
+      await existingGymMember.save();
+    }
+
     console.log("🌱 Idempotent seeding completed successfully.");
   } catch (error) {
     console.error("❌ Failed to seed real database:", error);

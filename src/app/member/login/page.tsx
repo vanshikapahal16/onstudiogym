@@ -40,7 +40,7 @@ function MemberLoginForm() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "Invalid credentials");
+        throw new Error(data.error ? `${data.message}: ${data.error}` : (data.message || "Invalid credentials"));
       }
 
       router.push(redirect);
@@ -70,7 +70,7 @@ function MemberLoginForm() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to submit request");
+        throw new Error(data.error ? `${data.message} (${data.error})` : (data.message || "Failed to submit request"));
       }
 
       setIsSubmitted(true);

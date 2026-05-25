@@ -1,7 +1,5 @@
 import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import Member from "@/models/Member";
 
 const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
 const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);
@@ -34,32 +32,10 @@ export const proxy = clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL("/member/login", req.url));
     }
 
-    // Connect to database to validate status
-    await connectToDatabase();
-    const member = await Member.findOne({ clerkId: userId });
-
-    // Note: If no member record exists yet, we let page routes proceed to `/member` 
-    // where our Layout Server Component will automatically register them.
-    // However, if a record DOES exist, we enforce status checks.
-    if (member) {
-      if (!member.approved) {
-        if (isMemberApiRoute(req)) {
-          return new Response(JSON.stringify({ success: false, error: "Waiting for admin approval" }), { status: 403 });
-        }
-        return NextResponse.redirect(new URL("/waiting-approval", req.url));
-      }
-      if (!member.membershipActive) {
-        if (isMemberApiRoute(req)) {
-          return new Response(JSON.stringify({ success: false, error: "Membership suspended" }), { status: 403 });
-        }
-        return NextResponse.redirect(new URL("/inactive", req.url));
-      }
-    } else {
-      // If no member record exists and they call a member API, reject it
-      if (isMemberApiRoute(req)) {
-        return new Response(JSON.stringify({ success: false, error: "Account not registered" }), { status: 403 });
-      }
-    }
+    // Note: To avoid importing Node.js-only modules (like mongoose or fs)
+    // inside the Edge-runtime proxy, we delegate the member database status checks
+    // (approved/active) to the Page Layout Server Component (src/app/member/layout.tsx)
+    // and the respective serverless API routes.
   }
 
   // 3. Admin Route Protection

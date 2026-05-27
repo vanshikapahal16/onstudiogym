@@ -1,13 +1,13 @@
 "use client";
 
 import { useSignIn } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, ArrowRight, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function AdminLogin() {
+function AdminLoginContent() {
   const { signIn } = useSignIn();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -106,5 +106,17 @@ export default function AdminLogin() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function AdminLogin() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-6 text-white text-sm font-sans uppercase tracking-widest">
+        Loading Admin Portal...
+      </div>
+    }>
+      <AdminLoginContent />
+    </Suspense>
   );
 }

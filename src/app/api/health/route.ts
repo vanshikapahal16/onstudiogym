@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
     env: {
       MONGODB_URI_DEFINED: !!process.env.MONGODB_URI,
       JWT_SECRET_DEFINED: !!process.env.JWT_SECRET,
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY_DEFINED: !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !!process.env.CLERK_PUBLISHABLE_KEY,
+      CLERK_SECRET_KEY_DEFINED: !!process.env.CLERK_SECRET_KEY,
       NODE_ENV: process.env.NODE_ENV,
     },
     database: {

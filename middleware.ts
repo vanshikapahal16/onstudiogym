@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
 const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);
 
-export const proxy = clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
 
   // 1. Exclude public and auth assets

@@ -17,10 +17,17 @@ const AdminSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, "Phone is required"],
       unique: true,
       index: true,
       trim: true,
+      sparse: true,
+    },
+    uniqueId: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+      sparse: true,
     },
     hashedPassword: {
       type: String,

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { verifyAuthTokenEdge, isAdmin } from "@/middleware/auth";
 
 const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
 const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);
@@ -40,35 +41,12 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 3. Admin Route Protection
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
-    const { userId } = await auth();
-    if (!userId) {
+    const decoded = await verifyAuthTokenEdge(req);
+    if (!decoded || !isAdmin(decoded)) {
       if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
         return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
       }
       return NextResponse.redirect(new URL("/admin/login", req.url));
-    }
-
-    // Enforce email check using Clerk
-    const { sessionClaims } = await auth();
-    let email = (sessionClaims as any)?.email;
-
-    if (!email) {
-      try {
-        const client = await clerkClient();
-        const user = await client.users.getUser(userId);
-        email = user.emailAddresses[0]?.emailAddress;
-      } catch (err) {
-        console.error("Failed to fetch Clerk user details in proxy:", err);
-      }
-    }
-
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-
-    if (!email || !adminEmails.includes(email.toLowerCase())) {
-      if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
-        return new Response(JSON.stringify({ success: false, error: "Forbidden: Admins only" }), { status: 403 });
-      }
-      return NextResponse.redirect(new URL("/admin/login?error=unauthorized", req.url));
     }
   }
 

@@ -553,11 +553,13 @@ function initMockDatabase() {
 
   const hasVanshika = data.admins.some((a: any) => a.phone === "9588715527");
   const hasSukchain = data.admins.some((a: any) => a.phone === "8400050073");
+  const hasAkash = data.admins.some((a: any) => a.uniqueId === "akash1284");
 
   if (!hasVanshika) {
     data.admins.push({
       _id: new mongoose.Types.ObjectId().toString(),
       name: "Vanshika",
+      uniqueId: "vanshika16",
       phone: "9588715527",
       email: "vanshikapahal16@gmail.com",
       password: "Vanshika@123",
@@ -568,17 +570,45 @@ function initMockDatabase() {
       updatedAt: new Date().toISOString()
     });
     dataChanged = true;
+  } else {
+    const idx = data.admins.findIndex((a: any) => a.phone === "9588715527");
+    if (idx >= 0 && !data.admins[idx].uniqueId) {
+      data.admins[idx].uniqueId = "vanshika16";
+      dataChanged = true;
+    }
   }
 
   if (!hasSukchain) {
     data.admins.push({
       _id: new mongoose.Types.ObjectId().toString(),
       name: "Sukchain",
+      uniqueId: "sukchain",
       phone: "8400050073",
       email: "sukchain@gmail.com",
       password: "Sukchain@123",
       hashedPassword: "", // will be hashed below
       role: "admin",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    dataChanged = true;
+  } else {
+    const idx = data.admins.findIndex((a: any) => a.phone === "8400050073");
+    if (idx >= 0 && !data.admins[idx].uniqueId) {
+      data.admins[idx].uniqueId = "sukchain";
+      dataChanged = true;
+    }
+  }
+
+  if (!hasAkash) {
+    data.admins.push({
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Akash",
+      uniqueId: "akash1284",
+      password: "340515",
+      hashedPassword: "", // will be hashed below
+      role: "superadmin",
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -699,6 +729,7 @@ async function seedDatabaseIfEmpty() {
       console.log("🌱 Creating admin: Vanshika");
       await Admin.create({
         name: "Vanshika",
+        uniqueId: "vanshika16",
         phone: "9588715527",
         email: "vanshikapahal16@gmail.com",
         password: "Vanshika@123",
@@ -708,6 +739,7 @@ async function seedDatabaseIfEmpty() {
     } else {
       console.log("🌱 Admin Vanshika already exists. Updating credentials/role...");
       existingVanshika.name = "Vanshika";
+      existingVanshika.uniqueId = "vanshika16";
       existingVanshika.phone = "9588715527";
       existingVanshika.email = "vanshikapahal16@gmail.com";
       existingVanshika.role = "superadmin";
@@ -724,6 +756,7 @@ async function seedDatabaseIfEmpty() {
       console.log("🌱 Creating admin: Sukchain");
       await Admin.create({
         name: "Sukchain",
+        uniqueId: "sukchain",
         phone: "8400050073",
         email: "sukchain@gmail.com",
         password: "Sukchain@123",
@@ -733,12 +766,34 @@ async function seedDatabaseIfEmpty() {
     } else {
       console.log("🌱 Admin Sukchain already exists. Updating credentials/role...");
       existingSukchain.name = "Sukchain";
+      existingSukchain.uniqueId = "sukchain";
       existingSukchain.phone = "8400050073";
       existingSukchain.email = "sukchain@gmail.com";
       existingSukchain.role = "admin";
       existingSukchain.isActive = true;
       existingSukchain.password = "Sukchain@123";
       await existingSukchain.save();
+    }
+
+    // 2.5 Seed Akash
+    const existingAkash = await Admin.findOne({ uniqueId: "akash1284" });
+    if (!existingAkash) {
+      console.log("🌱 Creating admin: Akash");
+      await Admin.create({
+        name: "Akash",
+        uniqueId: "akash1284",
+        password: "340515",
+        role: "superadmin",
+        isActive: true,
+      });
+    } else {
+      console.log("🌱 Admin Akash already exists. Updating credentials/role...");
+      existingAkash.name = "Akash";
+      existingAkash.uniqueId = "akash1284";
+      existingAkash.role = "superadmin";
+      existingAkash.isActive = true;
+      existingAkash.password = "340515";
+      await existingAkash.save();
     }
 
     // 3. Seed Rahul

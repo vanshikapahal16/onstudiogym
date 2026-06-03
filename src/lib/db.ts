@@ -17,6 +17,7 @@ interface MongooseCache {
 declare global {
   var mongooseCached: MongooseCache;
   var useMockDatabase: boolean;
+  var databaseConnectionError: string | null;
 }
 
 let cached = global.mongooseCached;
@@ -901,12 +902,14 @@ export async function connectToDatabase() {
     cached.conn = await cached.promise;
     console.log("🔋 Connected successfully to MongoDB Atlas database.");
     await seedDatabaseIfEmpty();
+    global.databaseConnectionError = null;
   } catch (e: any) {
     cached.promise = null;
     cached.conn = null;
     console.warn("❌ MongoDB connection failed. Activating local JSON database fallback.");
     console.warn("Reason:", e.message);
     global.useMockDatabase = true;
+    global.databaseConnectionError = e.message || String(e);
     initMockDatabase();
   }
 

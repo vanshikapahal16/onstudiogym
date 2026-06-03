@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     diagnostics.database.connected = mongoose.connection.readyState === 1;
     diagnostics.database.usingMock = !!global.useMockDatabase;
     diagnostics.database.connectionName = mongoose.connection.name;
+    diagnostics.database.error = global.databaseConnectionError || null;
     
     if (diagnostics.database.connected && !global.useMockDatabase && mongoose.connection.db) {
       // Try a simple database operation

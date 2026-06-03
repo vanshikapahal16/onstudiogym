@@ -691,8 +691,10 @@ const originalModel = mongoose.model;
 // Seed Real MongoDB Database
 async function seedDatabaseIfEmpty() {
   try {
-    const Admin = mongoose.models.Admin || require("@/models/Admin").default || require("@/models/Admin");
-    const Member = mongoose.models.Member || require("@/models/Member").default || require("@/models/Member");
+    const AdminModule = await import("../models/Admin");
+    const Admin = mongoose.models.Admin || AdminModule.default || AdminModule;
+    const MemberModule = await import("../models/Member");
+    const Member = mongoose.models.Member || MemberModule.default || MemberModule;
 
     console.log("🌱 Verifying / Seeding real database records...");
 

@@ -15,6 +15,7 @@ export default clerkMiddleware(async (auth, req) => {
     pathname === "/waiting-approval" ||
     pathname === "/inactive" ||
     pathname === "/" ||
+    pathname.startsWith("/sso-callback") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||

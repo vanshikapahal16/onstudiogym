@@ -19,8 +19,8 @@ export default function MemberLoginForm() {
     try {
       await signIn.sso({
         strategy: "oauth_google",
-        redirectUrl: "/member",
-        redirectCallbackUrl: "/member",
+        redirectUrl: "/sso-callback",
+        redirectCallbackUrl: "/sso-callback?complete=true",
       });
     } catch (err: any) {
       console.error("OAuth error:", err);

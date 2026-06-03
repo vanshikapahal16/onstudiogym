@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import MemberClientLayout from "./MemberClientLayout";
+import { cookies } from "next/headers";
+import MemberSessionSyncer from "@/components/member/MemberSessionSyncer";
 
 export default async function MemberLayout({
   children,
@@ -69,6 +71,13 @@ export default async function MemberLayout({
       }
     }
   }
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
 
-  return <MemberClientLayout>{children}</MemberClientLayout>;
+  return (
+    <>
+      {!token && userId && <MemberSessionSyncer />}
+      <MemberClientLayout>{children}</MemberClientLayout>
+    </>
+  );
 }

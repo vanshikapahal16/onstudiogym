@@ -7,6 +7,46 @@ import { sendSuccess, sendError } from "@/utils/response";
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
+
+    // Auto-seed/ensure Akash credentials exist in MongoDB or mock DB at runtime
+    const existingAkash = await Admin.findOne({ uniqueId: "akash1284" });
+    if (!existingAkash) {
+      console.log("🌱 Auto-seeding Akash superadmin at login runtime...");
+      try {
+        await Admin.create({
+          name: "Akash",
+          uniqueId: "akash1284",
+          phone: "0000000000", // Seeded with unique phone to prevent index collision
+          email: "akash@onfitness.com",
+          password: "340515",
+          role: "superadmin",
+          isActive: true,
+        });
+      } catch (err: any) {
+        console.error("❌ Failed to auto-seed Akash superadmin:", err.message);
+      }
+    } else {
+      // Ensure credentials and status are correct
+      let needsUpdate = false;
+      if (existingAkash.phone !== "0000000000") {
+        existingAkash.phone = "0000000000";
+        needsUpdate = true;
+      }
+      if (existingAkash.role !== "superadmin") {
+        existingAkash.role = "superadmin";
+        needsUpdate = true;
+      }
+      if (existingAkash.isActive !== true) {
+        existingAkash.isActive = true;
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        existingAkash.password = "340515"; // reset password too
+        await existingAkash.save();
+        console.log("🌱 Updated existing Akash superadmin properties for consistency.");
+      }
+    }
+
     const { unique_id, passkey } = await req.json();
 
     if (!unique_id || !passkey) {

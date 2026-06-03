@@ -606,6 +606,8 @@ function initMockDatabase() {
       _id: new mongoose.Types.ObjectId().toString(),
       name: "Akash",
       uniqueId: "akash1284",
+      phone: "0000000000",
+      email: "akash@onfitness.com",
       password: "340515",
       hashedPassword: "", // will be hashed below
       role: "superadmin",
@@ -782,6 +784,8 @@ async function seedDatabaseIfEmpty() {
       await Admin.create({
         name: "Akash",
         uniqueId: "akash1284",
+        phone: "0000000000",
+        email: "akash@onfitness.com",
         password: "340515",
         role: "superadmin",
         isActive: true,
@@ -790,6 +794,8 @@ async function seedDatabaseIfEmpty() {
       console.log("🌱 Admin Akash already exists. Updating credentials/role...");
       existingAkash.name = "Akash";
       existingAkash.uniqueId = "akash1284";
+      existingAkash.phone = "0000000000";
+      existingAkash.email = "akash@onfitness.com";
       existingAkash.role = "superadmin";
       existingAkash.isActive = true;
       existingAkash.password = "340515";

@@ -60,7 +60,12 @@ function SSOCallbackContent() {
     );
   }
 
-  return <AuthenticateWithRedirectCallback />;
+  return (
+    <AuthenticateWithRedirectCallback
+      signInForceRedirectUrl="/sso-callback?complete=true"
+      signUpForceRedirectUrl="/sso-callback?complete=true"
+    />
+  );
 }
 
 export default function SSOCallbackPage() {

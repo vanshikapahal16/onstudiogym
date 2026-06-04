@@ -12,6 +12,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (
     pathname === "/member/login" ||
     pathname === "/admin/login" ||
+    pathname === "/api/admin/login" ||
     pathname === "/waiting-approval" ||
     pathname === "/inactive" ||
     pathname === "/" ||

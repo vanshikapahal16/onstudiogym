@@ -15,6 +15,8 @@ import {
   LogOut,
 } from "lucide-react";
 
+import { useClerk } from "@clerk/nextjs";
+
 const navItems = [
   { name: "Dashboard", href: "/member", icon: LayoutDashboard },
   { name: "Attendance", href: "/member/attendance", icon: Clock },
@@ -33,6 +35,7 @@ interface MemberSidebarProps {
 export default function MemberSidebar({ isOpen, onClose }: MemberSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { signOut } = useClerk();
   const [member, setMember] = useState<{ fullName: string; email?: string; phoneNumber: string; profileImage?: string } | null>(null);
 
   useEffect(() => {
@@ -51,9 +54,10 @@ export default function MemberSidebar({ isOpen, onClose }: MemberSidebarProps) {
     e.stopPropagation();
     try {
       await fetch("/api/member/logout", { method: "POST" });
-      router.push("/member/login");
-      router.refresh();
-    } catch (err) {}
+      await signOut({ redirectUrl: "/member/login" });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   const getInitials = (name: string) => {

@@ -1,26 +1,26 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs";
+import { useSignIn } from "@clerk/nextjs/legacy";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { UserCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function MemberLoginForm() {
-  const { signIn } = useSignIn();
+  const { signIn, isLoaded } = useSignIn();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const handleGoogleLogin = async () => {
-    if (!signIn) return;
+    if (!isLoaded || !signIn) return;
     setIsSubmitting(true);
     setError("");
 
     try {
-      await signIn.sso({
+      await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback?complete=true",
-        redirectCallbackUrl: "/sso-callback",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/sso-callback?complete=true",
       });
     } catch (err: any) {
       console.error("OAuth error:", err);
@@ -72,7 +72,7 @@ export default function MemberLoginForm() {
           <div className="space-y-4">
             <button
               onClick={handleGoogleLogin}
-              disabled={isSubmitting}
+              disabled={!isLoaded || isSubmitting}
               className="w-full py-4 rounded-xl bg-white text-black font-bold uppercase tracking-widest hover:bg-white/95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group text-sm cursor-pointer font-sans"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -81,8 +81,8 @@ export default function MemberLoginForm() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
               </svg>
-              {isSubmitting ? "Redirecting..." : "Continue with Google"}
-              {!isSubmitting && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+              {!isLoaded ? "Loading..." : isSubmitting ? "Redirecting..." : "Continue with Google"}
+              {isLoaded && !isSubmitting && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </button>
           </div>
 

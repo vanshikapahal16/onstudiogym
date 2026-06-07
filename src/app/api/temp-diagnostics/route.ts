@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
+import Payment from "@/models/Payment";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,26 +13,54 @@ export async function GET(req: NextRequest) {
     // 2. Try inserting a test member to capture the database/validation error
     let testInsertResult = null;
     try {
+      // Clear any previous test member to avoid duplicate key errors on subsequent runs
+      await Member.deleteOne({ email: "testnew@gmail.com" });
+      await Payment.deleteOne({ invoiceId: { $regex: "^INV-TEST-" } });
+
       const testMember = await Member.create({
-        name: "Akash Test Diagnostics",
-        phone: "9467658854",
-        email: "akash_test_diag@onfitness.com",
-        address: "Khaspur",
+        name: "Test User",
+        phone: "9988776655",
+        email: "testnew@gmail.com",
+        address: "Test Address",
+        membershipPlan: "Quarterly",
+        membershipDuration: 3,
+        totalFee: 500,
+        totalPaid: 200,
         approved: true,
         membershipActive: true,
         isActive: true,
+        membershipStatus: "Active",
+        mustChangePassword: false,
       });
-      testInsertResult = { success: true, id: testMember._id };
-      // Clean up
+
+      // Also simulate payment creation
+      let paymentResult = null;
+      if (testMember.totalPaid && testMember.totalPaid > 0) {
+        const paymentStatus = testMember.remainingAmount === 0 ? "Paid" : "Partially Paid";
+        const payment = await Payment.create({
+          memberId: testMember._id,
+          amount: testMember.totalPaid,
+          invoiceId: `INV-TEST-${Date.now()}`,
+          status: paymentStatus,
+          date: new Date(),
+        });
+        paymentResult = { success: true, id: payment._id };
+      }
+
+      testInsertResult = { success: true, memberId: testMember._id, paymentResult };
+      
+      // Clean up after test
       await Member.deleteOne({ _id: testMember._id });
+      if (paymentResult && paymentResult.id) {
+        await Payment.deleteOne({ _id: paymentResult.id });
+      }
     } catch (err: any) {
       testInsertResult = {
         success: false,
         name: err.name,
         message: err.message,
         code: err.code,
-        keyPattern: err.keyPattern,
-        keyValue: err.keyValue,
+        stack: err.stack,
       };
     }
 

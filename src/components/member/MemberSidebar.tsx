@@ -13,12 +13,14 @@ import {
   User,
   Bell,
   LogOut,
+  QrCode,
 } from "lucide-react";
 
 import { useClerk } from "@clerk/nextjs";
 
 const navItems = [
   { name: "Dashboard", href: "/member", icon: LayoutDashboard },
+  { name: "My QR Code", href: "/member/qr", icon: QrCode },
   { name: "Attendance", href: "/member/attendance", icon: Clock },
   { name: "Payments", href: "/member/payments", icon: CreditCard },
   { name: "Membership", href: "/member/payments#membership", icon: CalendarDays },

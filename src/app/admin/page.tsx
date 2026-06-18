@@ -324,14 +324,14 @@ export default function Dashboard() {
                   <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary p-0.5">
                     <div className="w-full h-full bg-[#0B0F19] rounded-full flex items-center justify-center overflow-hidden">
                       {occupant.profileImage ? (
-                        <img src={occupant.profileImage} alt={occupant.fullName} className="w-full h-full object-cover" />
+                        <img src={occupant.profileImage} alt={occupant.fullName || "Member"} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-xs font-bold text-white">{occupant.fullName.charAt(0).toUpperCase()}</span>
+                        <span className="text-xs font-bold text-white">{(occupant.fullName || "M").charAt(0).toUpperCase()}</span>
                       )}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{occupant.fullName}</p>
+                    <p className="text-sm font-semibold text-white truncate">{occupant.fullName || "Unknown Member"}</p>
                     <p className="text-[10px] text-primary">Checked In</p>
                   </div>
                   <div className="text-right">

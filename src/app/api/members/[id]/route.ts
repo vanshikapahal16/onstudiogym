@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import Payment from "@/models/Payment";
@@ -6,16 +7,12 @@ import { uploadImage } from "@/lib/cloudinary";
 import { addMonths } from "date-fns";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { sendSuccess, sendUnauthorized, sendNotFound, sendError } from "@/utils/response";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 
 // GET /api/members/:id (Get Single Member)
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const { userId } = await auth();
-    if (!userId) {
-      return sendUnauthorized();
-    }
-
     await connectToDatabase();
     const member = await Member.findById(params.id).select("-password -hashedPassword");
 
@@ -23,18 +20,30 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
       return sendNotFound("Member not found");
     }
 
-    // Authorization check: members can only view their own profiles, admins can view any profile
-    const isOwner = member.clerkId === userId;
+    // 1. Try custom admin JWT first (used by Admin Portal)
+    const decoded = verifyAuthToken(req);
+    const isCustomAdmin = isAdmin(decoded);
     
-    const { sessionClaims } = await auth();
-    let emailAddress = (sessionClaims as any)?.email;
-    if (!emailAddress) {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      emailAddress = user.emailAddresses[0]?.emailAddress;
+    let isUserAdmin = isCustomAdmin;
+    let isOwner = false;
+
+    // 2. If not a custom admin, try Clerk auth (used by Member Portal)
+    if (!isCustomAdmin) {
+      const { userId: clerkUserId } = await auth();
+      if (clerkUserId) {
+        isOwner = member.clerkId === clerkUserId;
+        
+        const { sessionClaims } = await auth();
+        let emailAddress = (sessionClaims as any)?.email;
+        if (!emailAddress) {
+          const client = await clerkClient();
+          const user = await client.users.getUser(clerkUserId);
+          emailAddress = user.emailAddresses[0]?.emailAddress;
+        }
+        const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+        isUserAdmin = !!(emailAddress && adminEmails.includes(emailAddress.toLowerCase()));
+      }
     }
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
 
     if (!isUserAdmin && !isOwner) {
       return sendUnauthorized("You cannot access another member's profile");
@@ -50,11 +59,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const { userId } = await auth();
-    if (!userId) {
-      return sendUnauthorized();
-    }
-
     const updates = await req.json();
 
     await connectToDatabase();
@@ -64,18 +68,30 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       return sendNotFound("Member not found");
     }
 
-    // Authorization check
-    const isOwner = member.clerkId === userId;
+    // 1. Try custom admin JWT first (used by Admin Portal)
+    const decoded = verifyAuthToken(req);
+    const isCustomAdmin = isAdmin(decoded);
     
-    const { sessionClaims } = await auth();
-    let emailAddress = (sessionClaims as any)?.email;
-    if (!emailAddress) {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      emailAddress = user.emailAddresses[0]?.emailAddress;
+    let isUserAdmin = isCustomAdmin;
+    let isOwner = false;
+
+    // 2. If not a custom admin, try Clerk auth (used by Member Portal)
+    if (!isCustomAdmin) {
+      const { userId: clerkUserId } = await auth();
+      if (clerkUserId) {
+        isOwner = member.clerkId === clerkUserId;
+        
+        const { sessionClaims } = await auth();
+        let emailAddress = (sessionClaims as any)?.email;
+        if (!emailAddress) {
+          const client = await clerkClient();
+          const user = await client.users.getUser(clerkUserId);
+          emailAddress = user.emailAddresses[0]?.emailAddress;
+        }
+        const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+        isUserAdmin = !!(emailAddress && adminEmails.includes(emailAddress.toLowerCase()));
+      }
     }
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
 
     if (!isUserAdmin && !isOwner) {
       return sendUnauthorized("Unauthorized modification attempt");
@@ -262,21 +278,27 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
-    const { userId } = await auth();
-    if (!userId) {
-      return sendUnauthorized();
-    }
+    // 1. Try custom admin JWT first (used by Admin Portal)
+    const decoded = verifyAuthToken(req);
+    const isCustomAdmin = isAdmin(decoded);
+    
+    let isUserAdmin = isCustomAdmin;
 
-    // Check if the user is an admin
-    const { sessionClaims } = await auth();
-    let emailAddress = (sessionClaims as any)?.email;
-    if (!emailAddress) {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      emailAddress = user.emailAddresses[0]?.emailAddress;
+    // 2. If not a custom admin, try Clerk auth (used by Member Portal or Clerk admins)
+    if (!isCustomAdmin) {
+      const { userId: clerkUserId } = await auth();
+      if (clerkUserId) {
+        const { sessionClaims } = await auth();
+        let emailAddress = (sessionClaims as any)?.email;
+        if (!emailAddress) {
+          const client = await clerkClient();
+          const user = await client.users.getUser(clerkUserId);
+          emailAddress = user.emailAddresses[0]?.emailAddress;
+        }
+        const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+        isUserAdmin = !!(emailAddress && adminEmails.includes(emailAddress.toLowerCase()));
+      }
     }
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
 
     if (!isUserAdmin) {
       return sendUnauthorized();
@@ -287,6 +309,25 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
 
     if (!member) {
       return sendNotFound("Member not found");
+    }
+
+    // Clean up associated payment logs, attendance records, and notifications
+    await Payment.deleteMany({ memberId: params.id });
+    
+    try {
+      const AttendanceModule = await import("@/models/Attendance");
+      const Attendance = mongoose.models.Attendance || AttendanceModule.default || AttendanceModule;
+      await Attendance.deleteMany({ memberId: params.id });
+    } catch (err) {
+      console.error("Failed to delete member attendance logs:", err);
+    }
+
+    try {
+      const NotificationModule = await import("@/models/Notification");
+      const Notification = mongoose.models.Notification || NotificationModule.default || NotificationModule;
+      await Notification.deleteMany({ userId: params.id });
+    } catch (err) {
+      console.error("Failed to delete member notifications:", err);
     }
 
     return sendSuccess("Member deleted successfully");

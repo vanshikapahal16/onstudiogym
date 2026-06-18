@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "on_fitness_secret_key";
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is missing.");
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface DecodedToken {
   id: string;
@@ -55,6 +58,7 @@ export function verifyAuthToken(req: NextRequest): DecodedToken | null {
     const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
     return decoded;
   } catch (error) {
+    console.error("🔍 JWT Verification failed:", error);
     return null;
   }
 }
@@ -122,3 +126,19 @@ export async function verifyAuthTokenEdge(req: NextRequest): Promise<DecodedToke
     return null;
   }
 }
+
+// Helper to verify administrator authentication in Next.js Server Actions
+export async function verifyAdminServerAction(): Promise<boolean> {
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    if (!token) return false;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return isAdmin(decoded);
+  } catch {
+    return false;
+  }
+}
+

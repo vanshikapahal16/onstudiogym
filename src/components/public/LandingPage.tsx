@@ -18,13 +18,32 @@ export default function LandingPage({ initialGalleryImages }: { initialGalleryIm
 
   const [inquiryStatus, setInquiryStatus] = useState<"idle" | "submitting" | "success">("idle");
 
-  const handleInquiry = (e: React.FormEvent) => {
+  const handleInquiry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setInquiryStatus("submitting");
-    setTimeout(() => {
-      setInquiryStatus("success");
-      // Simulate saving to DB
-    }, 1500);
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const phoneNumber = formData.get("phoneNumber") as string;
+    const fitnessGoal = formData.get("fitnessGoal") as string;
+
+    try {
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phoneNumber, fitnessGoal }),
+      });
+      if (res.ok) {
+        setInquiryStatus("success");
+      } else {
+        setInquiryStatus("idle");
+        alert("Failed to submit inquiry. Please try again.");
+      }
+    } catch (error) {
+      console.error("Inquiry error:", error);
+      setInquiryStatus("idle");
+      alert("An error occurred. Please try again.");
+    }
   };
 
   return (
@@ -517,15 +536,15 @@ export default function LandingPage({ initialGalleryImages }: { initialGalleryIm
               <form onSubmit={handleInquiry} className="space-y-6">
                 <div>
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Full Name</label>
-                  <input type="text" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors" placeholder="John Doe" />
+                  <input type="text" name="name" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors" placeholder="John Doe" />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Phone Number</label>
-                  <input type="tel" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors" placeholder="+91 98765 43210" />
+                  <input type="tel" name="phoneNumber" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors" placeholder="+91 98765 43210" />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Fitness Goal</label>
-                  <select className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors appearance-none">
+                  <select name="fitnessGoal" className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-[#c39b62] transition-colors appearance-none">
                     <option>Weight Loss</option>
                     <option>Muscle Building</option>
                     <option>General Fitness</option>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { QrCode, Search, UserCheck, Clock, ArrowRight, Activity, X, User } from "lucide-react";
+import { QrCode, Search, UserCheck, Clock, ArrowRight, Activity, X, User, Camera, Download } from "lucide-react";
 import Link from "next/link";
 
 interface AttendanceLog {
@@ -16,6 +16,8 @@ interface AttendanceLog {
   checkIn: string;
   checkOut?: string;
   duration?: number;
+  checkInSource?: string;
+  deviceInfo?: string;
 }
 
 interface MemberSearchResult {
@@ -38,9 +40,36 @@ export default function AttendancePage() {
   const [searching, setSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // Filter States
+  const [logFilterQuery, setLogFilterQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [checkInSource, setCheckInSource] = useState("");
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      let url = `/api/attendance/history?limit=100`;
+      if (logFilterQuery) url += `&search=${encodeURIComponent(logFilterQuery)}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+      if (checkInSource) url += `&source=${encodeURIComponent(checkInSource)}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        setLogs(data.data.logs);
+      }
+    } catch (error) {
+      console.error("Failed to fetch attendance logs", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [logFilterQuery, startDate, endDate, checkInSource]);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
@@ -51,19 +80,37 @@ export default function AttendancePage() {
     }
   }, [searchQuery]);
 
-  const fetchLogs = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/attendance?limit=50");
-      const data = await res.json();
-      if (data.success) {
-        setLogs(data.data.logs);
-      }
-    } catch (error) {
-      console.error("Failed to fetch attendance logs", error);
-    } finally {
-      setLoading(false);
+  const exportToCSV = () => {
+    if (logs.length === 0) {
+      alert("No attendance data available to export.");
+      return;
     }
+
+    const headers = ["Member Name", "Phone Number", "Check In Time", "Check Out Time", "Duration (mins)", "Check In Source", "Device Info"];
+    const rows = logs.map(log => [
+      log.memberId?.fullName || "Unknown Member",
+      log.memberId?.phoneNumber || "N/A",
+      log.checkIn ? new Date(log.checkIn).toLocaleString() : "N/A",
+      log.checkOut ? new Date(log.checkOut).toLocaleString() : "N/A",
+      log.duration || 0,
+      log.checkInSource || "QR Scan",
+      log.deviceInfo || "N/A"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `attendance_report_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSearch = async () => {
@@ -162,8 +209,15 @@ export default function AttendancePage() {
             </div>
             
             <Link 
+              href="/admin/attendance/scanner" 
+              className="px-4 py-2.5 bg-primary text-black font-bold uppercase tracking-wider text-xs rounded-xl hover:bg-primary/90 transition-all relative z-10 w-full flex items-center justify-center gap-2 mb-3"
+            >
+              <Camera className="w-4 h-4" /> Open Camera Scanner
+            </Link>
+            
+            <Link 
               href="/admin/common-qr" 
-              className="px-4 py-2.5 bg-primary text-black font-bold uppercase tracking-wider text-xs rounded-xl hover:bg-primary/90 transition-all relative z-10 w-full"
+              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold uppercase tracking-wider text-xs rounded-xl transition-all relative z-10 w-full flex items-center justify-center"
             >
               Get Entrance Poster
             </Link>
@@ -269,13 +323,23 @@ export default function AttendancePage() {
             className="glass-panel rounded-2xl border border-white/10 overflow-hidden flex flex-col min-h-[500px]"
           >
             {/* Table Control Header */}
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
-              <h3 className="text-lg font-bold text-white">Active Members Log</h3>
-              <div className="flex gap-2">
+            <div className="p-6 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/5">
+              <div>
+                <h3 className="text-lg font-bold text-white">Active Members Log</h3>
+                <p className="text-xs text-muted-foreground">Monitor check-ins and scan activity</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={exportToCSV}
+                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-primary" /> Export CSV
+                </button>
+                <div className="h-6 w-px bg-white/10 hidden sm:block" />
                 <button
                   onClick={() => setActiveTab("inside")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === "inside" ? "bg-primary text-black" : "text-muted-foreground hover:text-white"
+                    activeTab === "inside" ? "bg-primary text-black" : "bg-white/5 text-muted-foreground hover:text-white"
                   }`}
                 >
                   Inside ({insideCount})
@@ -283,11 +347,59 @@ export default function AttendancePage() {
                 <button
                   onClick={() => setActiveTab("all")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === "all" ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"
+                    activeTab === "all" ? "bg-primary text-black" : "bg-white/5 text-muted-foreground hover:text-white"
                   }`}
                 >
                   All Logs
                 </button>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="p-4 border-b border-white/10 bg-white/5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Search Log Name */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter by name..."
+                  value={logFilterQuery}
+                  onChange={(e) => setLogFilterQuery(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+
+              {/* Source Select */}
+              <div>
+                <select
+                  value={checkInSource}
+                  onChange={(e) => setCheckInSource(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50 transition-all"
+                >
+                  <option value="">All Sources</option>
+                  <option value="QR Scan">QR Scan</option>
+                  <option value="Manual Entry">Manual Entry</option>
+                </select>
               </div>
             </div>
 
@@ -310,6 +422,7 @@ export default function AttendancePage() {
                   <thead>
                     <tr className="border-b border-white/5 text-xs text-muted-foreground uppercase tracking-wider">
                       <th className="pb-3 font-semibold">Member</th>
+                      <th className="pb-3 font-semibold">Source / Device</th>
                       <th className="pb-3 font-semibold">Session Status</th>
                       <th className="pb-3 font-semibold">Entry Time</th>
                       <th className="pb-3 font-semibold">Visit Duration</th>
@@ -333,6 +446,16 @@ export default function AttendancePage() {
                               <p className="text-xs text-muted-foreground">{log.memberId.phoneNumber}</p>
                             </div>
                           </div>
+                        </td>
+                        <td className="py-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            log.checkInSource === "QR Scan" ? "bg-primary/20 text-primary border border-primary/20" : "bg-white/10 text-white"
+                          }`}>
+                            {log.checkInSource || "Manual"}
+                          </span>
+                          <p className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={log.deviceInfo}>
+                            {log.deviceInfo || "Manual Check-In"}
+                          </p>
                         </td>
                         <td className="py-4">
                           {log.checkOut ? (

@@ -125,6 +125,34 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDemoteAdmin = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to demote administrator ${name} to a regular member?`)) {
+      return;
+    }
+    setDeleteError("");
+
+    try {
+      const res = await fetch("/api/admin/management", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "demote",
+          id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to demote administrator");
+      }
+
+      alert(`Successfully demoted ${name} to Member!`);
+      fetchAdmins();
+    } catch (err: any) {
+      setDeleteError(err.message || "An unexpected error occurred");
+    }
+  };
+
   const tabs = [
     { name: "Gym Details", icon: Building },
     { name: "Account Profile", icon: User },
@@ -344,6 +372,14 @@ export default function SettingsPage() {
                               <td className="py-3 px-4 truncate max-w-[150px]">{admin.email || <span className="text-gray-500 italic text-[11px]">None</span>}</td>
                               <td className="py-3 px-4 text-xs">{new Date(admin.createdAt).toLocaleDateString()}</td>
                               <td className="py-3 px-4 text-right">
+                                <button
+                                  onClick={() => handleDemoteAdmin(admin._id, admin.name)}
+                                  disabled={isPrimaryOwner || isSelf}
+                                  className="p-2 rounded-lg text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-30 disabled:cursor-not-allowed hover:text-yellow-300 transition-colors mr-1"
+                                  title={isPrimaryOwner ? "Primary owner cannot be demoted" : isSelf ? "You cannot demote yourself" : "Demote to Member"}
+                                >
+                                  <ShieldAlert className="w-4 h-4" />
+                                </button>
                                 <button
                                   onClick={() => handleDeleteAdmin(admin._id)}
                                   disabled={isPrimaryOwner || isSelf}

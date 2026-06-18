@@ -1,32 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Dumbbell, PlayCircle, Star, Clock } from "lucide-react";
+import { Search, Dumbbell, PlayCircle, Star, Clock, Loader2 } from "lucide-react";
 
 const categories = [
-  "All", "Weight Loss", "Muscle Gain", "Strength Training", 
-  "Chest", "Back", "Shoulder", "Legs", 
-  "Cardio", "Beginner", "Advanced"
+  "All", "Chest", "Back", "Shoulder", "Legs", "Cardio", "Beginner"
 ];
 
-const exercises = [
-  { id: 1, title: "Bench Press", category: "Chest", type: "Strength", level: "Intermediate", target: "Pectoralis Major", reps: "4 sets x 8-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop" },
-  { id: 2, title: "Deadlift", category: "Back", type: "Strength", level: "Advanced", target: "Lower Back, Glutes", reps: "3 sets x 5-8 reps", duration: "15 mins", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470&auto=format&fit=crop" },
-  { id: 3, title: "Squats", category: "Legs", type: "Strength", level: "Beginner", target: "Quadriceps, Glutes", reps: "4 sets x 10-15 reps", duration: "12 mins", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop" },
-  { id: 4, title: "HIIT Sprint", category: "Cardio", type: "Fat Burn", level: "Intermediate", target: "Full Body", reps: "10 rounds x 30s", duration: "20 mins", img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470&auto=format&fit=crop" },
-  { id: 5, title: "Overhead Press", category: "Shoulder", type: "Muscle Gain", level: "Intermediate", target: "Deltoids", reps: "3 sets x 10-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469&auto=format&fit=crop" },
-  { id: 6, title: "Push Ups", category: "Beginner", type: "Endurance", level: "Beginner", target: "Chest, Triceps", reps: "3 sets to failure", duration: "5 mins", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446&auto=format&fit=crop" },
-];
+interface ExerciseItem {
+  _id: string;
+  title: string;
+  category: string;
+  type: string;
+  level: string;
+  target: string;
+  reps: string;
+  duration: string;
+  img: string;
+}
 
 export default function ExerciseLibrary() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [exercises, setExercises] = useState<ExerciseItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchExercises();
+  }, []);
+
+  const fetchExercises = async () => {
+    try {
+      const res = await fetch("/api/exercises");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setExercises(data.data.exercises || []);
+      }
+    } catch (err) {
+      console.error("Failed to load exercises:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredExercises = exercises.filter(ex => 
-    (activeCategory === "All" || ex.category === activeCategory) &&
-    (ex.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    (activeCategory === "All" || ex.category.toLowerCase() === activeCategory.toLowerCase()) &&
+    (ex.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     ex.target.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-10">
@@ -51,10 +81,10 @@ export default function ExerciseLibrary() {
           <Search className="w-5 h-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search exercises..."
+            placeholder="Search exercises by name or muscle group..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none text-white w-full placeholder:text-muted-foreground"
+            className="bg-transparent border-none outline-none text-white w-full placeholder:text-muted-foreground focus:ring-0"
           />
         </div>
 
@@ -63,7 +93,7 @@ export default function ExerciseLibrary() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300 ${
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300 cursor-pointer ${
                 activeCategory === cat
                   ? "bg-primary text-white neon-glow border border-primary/50"
                   : "bg-white/5 text-muted-foreground border border-white/10 hover:text-white hover:bg-white/10"
@@ -80,7 +110,7 @@ export default function ExerciseLibrary() {
         <AnimatePresence>
           {filteredExercises.map((exercise, index) => (
             <motion.div
-              key={exercise.id}
+              key={exercise._id}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -133,7 +163,7 @@ export default function ExerciseLibrary() {
         
         {filteredExercises.length === 0 && (
           <div className="col-span-full py-20 text-center">
-            <Dumbbell className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+            <Dumbbell className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4 animate-pulse" />
             <h3 className="text-xl font-bold text-white mb-2">No exercises found</h3>
             <p className="text-muted-foreground">Try adjusting your filters or search query.</p>
           </div>

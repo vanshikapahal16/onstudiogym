@@ -32,10 +32,6 @@ export default function MemberPayments() {
   const [loading, setLoading] = useState(true);
   const [activeInvoice, setActiveInvoice] = useState<PaymentLog | null>(null);
 
-  useEffect(() => {
-    fetchPaymentsData();
-  }, []);
-
   const fetchPaymentsData = async () => {
     setLoading(true);
     try {
@@ -59,6 +55,10 @@ export default function MemberPayments() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPaymentsData();
+  }, []);
 
   const getProgressPercentage = (joinDateStr?: string, expiryDateStr?: string) => {
     if (!joinDateStr || !expiryDateStr) return 0;

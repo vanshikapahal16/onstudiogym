@@ -31,14 +31,30 @@ export async function GET(req: NextRequest) {
     const todayCheckins = await Attendance.countDocuments({ checkIn: { $gte: startOfToday } });
 
     // 3. Financial calculations
-    const membersList = await Member.find({}, "totalFee totalPaid remainingAmount");
     let totalRevenue = 0;
     let pendingDues = 0;
 
-    membersList.forEach((m) => {
-      totalRevenue += m.totalPaid || 0;
-      pendingDues += m.remainingAmount || 0;
-    });
+    if (global.useMockDatabase) {
+      const membersList = await Member.find({}, "totalFee totalPaid remainingAmount");
+      membersList.forEach((m) => {
+        totalRevenue += m.totalPaid || 0;
+        pendingDues += m.remainingAmount || 0;
+      });
+    } else {
+      const financialStats = await Member.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$totalPaid" },
+            pendingDues: { $sum: "$remainingAmount" }
+          }
+        }
+      ]);
+      if (financialStats.length > 0) {
+        totalRevenue = financialStats[0].totalRevenue || 0;
+        pendingDues = financialStats[0].pendingDues || 0;
+      }
+    }
 
     // 4. Inactive members (no visit in last 15 days)
     const fifteenDaysAgo = subDays(today, 15);
@@ -50,16 +66,32 @@ export async function GET(req: NextRequest) {
     });
 
     // 5. Live Occupancy List (Retrieve details of checked-in members)
-    const activeSessions = await Attendance.find({ checkOut: null })
-      .populate("memberId", "fullName phoneNumber profileImage")
-      .select("checkIn");
+    let liveOccupancy = [];
+    if (global.useMockDatabase) {
+      const activeSessions = await Attendance.find({ checkOut: null });
+      const members = await Member.find({});
+      liveOccupancy = activeSessions.map((session: any) => {
+        const mId = session.memberId ? session.memberId.toString() : "";
+        const member = members.find((m: any) => m._id.toString() === mId);
+        return {
+          memberId: mId,
+          fullName: member?.fullName || member?.name || "Unknown Member",
+          profileImage: member?.profileImage,
+          checkIn: session.checkIn,
+        };
+      });
+    } else {
+      const activeSessions = await Attendance.find({ checkOut: null })
+        .populate("memberId", "fullName phoneNumber profileImage")
+        .select("checkIn");
 
-    const liveOccupancy = activeSessions.map((session: any) => ({
-      memberId: session.memberId?._id,
-      fullName: session.memberId?.fullName,
-      profileImage: session.memberId?.profileImage,
-      checkIn: session.checkIn,
-    }));
+      liveOccupancy = activeSessions.map((session: any) => ({
+        memberId: session.memberId?._id?.toString() || "",
+        fullName: session.memberId?.fullName || session.memberId?.name || "Unknown Member",
+        profileImage: session.memberId?.profileImage,
+        checkIn: session.checkIn,
+      }));
+    }
 
     return sendSuccess("Dashboard statistics loaded", {
       statistics: {

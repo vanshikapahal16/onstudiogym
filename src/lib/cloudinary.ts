@@ -12,7 +12,8 @@ export async function uploadImage(fileStr: string): Promise<{ publicId: string; 
   // If no Cloudinary credentials are provided, return a mock URL using Unsplash
   if (
     !process.env.CLOUDINARY_CLOUD_NAME ||
-    process.env.CLOUDINARY_CLOUD_NAME === "mock_cloud"
+    process.env.CLOUDINARY_CLOUD_NAME === "mock_cloud" ||
+    process.env.CLOUDINARY_CLOUD_NAME === "test"
   ) {
     console.log("⚠️ Missing Cloudinary Credentials. Using simulated local storage.");
     return {

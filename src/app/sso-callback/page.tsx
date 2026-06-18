@@ -8,6 +8,7 @@ function SSOCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const complete = searchParams.get("complete");
+  const redirect = searchParams.get("redirect") || "/member";
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -17,7 +18,7 @@ function SSOCallbackContent() {
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            router.push("/member");
+            router.push(redirect);
             router.refresh();
           } else {
             setError(data.message || "Failed to sync session. Please try again.");
@@ -28,7 +29,7 @@ function SSOCallbackContent() {
           setError("An error occurred during session synchronization.");
         });
     }
-  }, [complete, router]);
+  }, [complete, redirect, router]);
 
   if (complete === "true") {
     return (
@@ -62,8 +63,8 @@ function SSOCallbackContent() {
 
   return (
     <AuthenticateWithRedirectCallback
-      signInForceRedirectUrl="/sso-callback?complete=true"
-      signUpForceRedirectUrl="/sso-callback?complete=true"
+      signInForceRedirectUrl={`/sso-callback?complete=true&redirect=${encodeURIComponent(redirect)}`}
+      signUpForceRedirectUrl={`/sso-callback?complete=true&redirect=${encodeURIComponent(redirect)}`}
     />
   );
 }

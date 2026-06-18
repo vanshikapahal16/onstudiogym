@@ -18,8 +18,38 @@ export async function runDailyAutomation() {
     await connectToDatabase();
     console.log("⚡ Executing Daily automated operations...");
 
-    const members = await Member.find({});
     const today = new Date();
+    
+    // Fetch all members to analyze
+    const members = await Member.find({});
+    
+    // 1. Pre-fetch pending payments to avoid N+1 queries in the loop
+    const pendingPayments = await Payment.find({ status: "Pending" });
+    const paymentsByMember: Record<string, any[]> = {};
+    pendingPayments.forEach(p => {
+      const mId = p.memberId ? p.memberId.toString() : "";
+      if (mId) {
+        if (!paymentsByMember[mId]) {
+          paymentsByMember[mId] = [];
+        }
+        paymentsByMember[mId].push(p);
+      }
+    });
+
+    // 2. Pre-fetch recent "We miss you!" notifications to avoid N+1 queries in the loop
+    const recentNotifications = await Notification.find({
+      type: "system",
+      title: "We miss you!",
+      createdAt: { $gte: subDays(today, 7) }
+    });
+    const notifiedUserIds = new Set(
+      recentNotifications.map(n => n.userId ? n.userId.toString() : "")
+    );
+
+    // Arrays to collect bulk/batch operations
+    const memberUpdates: any[] = [];
+    const paymentUpdates: any[] = [];
+    const newNotifications: any[] = [];
 
     for (const member of members) {
       // Skip automated status updates for Pending or Suspended members
@@ -27,7 +57,10 @@ export async function runDailyAutomation() {
         continue;
       }
 
-      const daysLeft = differenceInDays(new Date(member.membershipExpiry), today);
+      const expiryDate = member.membershipExpiry || member.membershipEndDate;
+      if (!expiryDate) continue;
+
+      const daysLeft = differenceInDays(new Date(expiryDate), today);
       let updatedStatus = "Active";
 
       if (daysLeft < 0) {
@@ -39,21 +72,21 @@ export async function runDailyAutomation() {
       // 1. Membership Expiry Automation
       if (member.membershipStatus !== updatedStatus) {
         member.membershipStatus = updatedStatus;
-        await member.save();
+        memberUpdates.push(member);
 
         // Generate Expiry Notifications
         if (updatedStatus === "Expired") {
-          await Notification.create({
+          newNotifications.push({
             userId: member._id,
             title: "Membership Expired",
-            message: `Hey ${member.fullName}, your membership expired on ${new Date(member.membershipExpiry).toLocaleDateString()}. Please renew!`,
+            message: `Hey ${member.fullName || member.name}, your membership expired on ${new Date(expiryDate).toLocaleDateString()}. Please renew!`,
             type: "expiry",
           });
         } else if (updatedStatus === "Expiring Soon") {
-          await Notification.create({
+          newNotifications.push({
             userId: member._id,
             title: "Membership Expiring Soon",
-            message: `Hey ${member.fullName}, your membership is expiring in ${daysLeft} days. Renew early!`,
+            message: `Hey ${member.fullName || member.name}, your membership is expiring in ${daysLeft} days. Renew early!`,
             type: "expiry",
           });
         }
@@ -62,14 +95,17 @@ export async function runDailyAutomation() {
       // 2. Overdue Payment Detection
       if (member.remainingAmount > 0) {
         // If payment is pending and membership is expired, mark Payment Overdue
-        const payments = await Payment.find({ memberId: member._id });
-        for (const payment of payments) {
-          if (payment.status === "Pending" && differenceInDays(today, new Date(member.joinDate)) > 30) {
+        const memberIdStr = member._id.toString();
+        const mPayments = paymentsByMember[memberIdStr] || [];
+        const joinDate = member.joinDate || member.membershipStartDate || member.createdAt;
+        
+        for (const payment of mPayments) {
+          if (joinDate && differenceInDays(today, new Date(joinDate)) > 30) {
             payment.status = "Overdue";
-            await payment.save();
+            paymentUpdates.push(payment);
 
             // Create notification for overdue dues
-            await Notification.create({
+            newNotifications.push({
               userId: member._id,
               title: "Overdue Payment Notice",
               message: `Your payment of $${member.remainingAmount} is currently overdue. Please contact reception.`,
@@ -83,16 +119,9 @@ export async function runDailyAutomation() {
       if (member.lastVisit) {
         const daysSinceLastVisit = differenceInDays(today, new Date(member.lastVisit));
         if (daysSinceLastVisit >= 15) {
-          // Check if notification already sent in the last 7 days
-          const recentNotification = await Notification.findOne({
-            userId: member._id,
-            type: "system",
-            title: "We miss you!",
-            createdAt: { $gte: subDays(today, 7) }
-          });
-
-          if (!recentNotification) {
-            await Notification.create({
+          const memberIdStr = member._id.toString();
+          if (!notifiedUserIds.has(memberIdStr)) {
+            newNotifications.push({
               userId: member._id,
               title: "We miss you!",
               message: `It has been ${daysSinceLastVisit} days since your last visit. We'd love to see you back crushing goals!`,
@@ -101,6 +130,42 @@ export async function runDailyAutomation() {
           }
         }
       }
+    }
+
+    // Execute Bulk Writes
+    if (newNotifications.length > 0) {
+      await Notification.insertMany(newNotifications);
+      console.log(`✉️ Inserted ${newNotifications.length} notifications in bulk.`);
+    }
+
+    if (paymentUpdates.length > 0) {
+      if (global.useMockDatabase) {
+        await Promise.all(paymentUpdates.map(p => p.save()));
+      } else {
+        const bulkOps = paymentUpdates.map(p => ({
+          updateOne: {
+            filter: { _id: p._id },
+            update: { $set: { status: p.status } }
+          }
+        }));
+        await Payment.bulkWrite(bulkOps);
+      }
+      console.log(`💳 Updated ${paymentUpdates.length} payments in bulk.`);
+    }
+
+    if (memberUpdates.length > 0) {
+      if (global.useMockDatabase) {
+        await Promise.all(memberUpdates.map(m => m.save()));
+      } else {
+        const bulkOps = memberUpdates.map(m => ({
+          updateOne: {
+            filter: { _id: m._id },
+            update: { $set: { membershipStatus: m.membershipStatus } }
+          }
+        }));
+        await Member.bulkWrite(bulkOps);
+      }
+      console.log(`👤 Updated ${memberUpdates.length} members in bulk.`);
     }
 
     lastRunDate = todayStr;

@@ -46,7 +46,9 @@ function getMockData() {
       inquiries: [],
       exercises: [],
       gallery: [],
-      attendance: []
+      attendance: [],
+      qrcode_tokens: [],
+      attendance_logs: []
     };
     fs.writeFileSync(dbFilePath, JSON.stringify(defaultData, null, 2), "utf8");
   }
@@ -70,7 +72,9 @@ function getCollectionName(modelName: string): string {
     Inquiry: "inquiries",
     Exercise: "exercises",
     Gallery: "gallery",
-    Attendance: "attendance"
+    Attendance: "attendance",
+    QRCodeTokens: "qrcode_tokens",
+    AttendanceLogs: "attendance_logs"
   };
   return map[modelName] || modelName.toLowerCase() + "s";
 }
@@ -103,6 +107,29 @@ function matchesQuery(item: any, filter: any): boolean {
     }
 
     const itemVal = item[key];
+
+    // Support regex check for RegExp instances
+    if (filterVal instanceof RegExp) {
+      if (!filterVal.test(itemVal ? itemVal.toString() : "")) {
+        return false;
+      }
+      continue;
+    }
+
+    // Support regex check for $regex operator objects
+    if (filterVal && typeof filterVal === "object" && "$regex" in filterVal) {
+      const regexStr = filterVal.$regex;
+      const options = filterVal.$options || "";
+      try {
+        const regex = new RegExp(regexStr, options);
+        if (!regex.test(itemVal ? itemVal.toString() : "")) {
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+      continue;
+    }
 
     const isOperatorObj = filterVal && typeof filterVal === "object" && 
                           !Array.isArray(filterVal) && 
@@ -145,7 +172,7 @@ function matchesQuery(item: any, filter: any): boolean {
 function runMockFind(modelName: string, filter: any, options: { limit?: number | null, skip?: number | null, sort?: any } = {}) {
   const data = getMockData();
   const collectionName = getCollectionName(modelName);
-  let collection = data[collectionName] || [];
+  const collection = data[collectionName] || [];
 
   let results = collection.filter((item: any) => matchesQuery(item, filter));
 
@@ -179,6 +206,7 @@ class MockQuery {
   private _skip: number | null = null;
   private _sort: any = null;
   private _single: boolean = false;
+  private _populates: { path: string; select?: string }[] = [];
 
   constructor(modelName: string, filter: any, single: boolean = false) {
     this.modelName = modelName;
@@ -201,7 +229,12 @@ class MockQuery {
     return this;
   }
 
-  populate(path: any) {
+  populate(path: any, select?: any) {
+    if (typeof path === "string") {
+      this._populates.push({ path, select });
+    } else if (path && typeof path === "object" && path.path) {
+      this._populates.push({ path: path.path, select: path.select });
+    }
     return this;
   }
 
@@ -214,19 +247,64 @@ class MockQuery {
   }
 
   async exec() {
+    let docs: any;
     if (this._single) {
       const results = runMockFind(this.modelName, this.filter, {
         limit: 1,
         sort: this._sort,
       });
-      return results.length > 0 ? results[0] : null;
+      docs = results.length > 0 ? results[0] : null;
     } else {
-      return runMockFind(this.modelName, this.filter, {
+      docs = runMockFind(this.modelName, this.filter, {
         limit: this._limit,
         skip: this._skip,
         sort: this._sort,
       });
     }
+
+    if (docs && this._populates.length > 0) {
+      const isArray = Array.isArray(docs);
+      const docList = isArray ? docs : [docs];
+      const model = (mongoose as any).models[this.modelName];
+
+      for (const pop of this._populates) {
+        const pathField = pop.path;
+        const selectFields = typeof pop.select === "string" ? pop.select.split(/\s+/) : null;
+
+        const schemaPath = model?.schema?.paths[pathField];
+        const refModelName = schemaPath?.options?.ref;
+
+        if (refModelName) {
+          for (const doc of docList) {
+            const refId = doc[pathField];
+            if (refId) {
+              const refIdStr = refId.toString();
+              const refDocs = runMockFind(refModelName, { _id: refIdStr });
+              if (refDocs.length > 0) {
+                const fullRefDoc = refDocs[0];
+                let populatedObj: any = {};
+
+                if (selectFields) {
+                  selectFields.forEach((f: string) => {
+                    if (f) {
+                      populatedObj[f] = fullRefDoc[f];
+                    }
+                  });
+                  populatedObj._id = fullRefDoc._id;
+                  populatedObj.id = fullRefDoc.id || fullRefDoc._id?.toString();
+                } else {
+                  populatedObj = { ...fullRefDoc };
+                }
+
+                doc[pathField] = populatedObj;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return docs;
   }
 
   then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
@@ -254,6 +332,19 @@ function createMockDocument(modelName: string, rawDoc: any) {
       toJSON: () => idStr,
       equals: (other: any) => other && other.toString() === idStr
     } as any;
+  }
+
+  if (modelName === "Member") {
+    if (doc.approved === undefined) doc.approved = false;
+    if (doc.membershipActive === undefined) doc.membershipActive = false;
+    if (doc.role === undefined) doc.role = "member";
+    if (doc.isActive === undefined) doc.isActive = true;
+    if (doc.attendanceCount === undefined) doc.attendanceCount = 0;
+    if (doc.mustChangePassword === undefined) doc.mustChangePassword = true;
+    if (!doc.qrIdentifier) {
+      doc.qrIdentifier = "qr_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      doc.qrCreatedAt = new Date().toISOString();
+    }
   }
 
   doc.isModified = function(pathName: string) {
@@ -378,6 +469,17 @@ function createMockDocument(modelName: string, rawDoc: any) {
     data[collectionName] = (data[collectionName] || []).filter((item: any) => item._id !== idStr);
     saveMockData(data);
     return { deletedCount: 1 };
+  };
+
+  doc.toObject = function() {
+    const obj = { ...doc };
+    delete obj.isModified;
+    delete obj.save;
+    delete obj.comparePassword;
+    delete obj.updateOne;
+    delete obj.deleteOne;
+    delete obj.toObject;
+    return obj;
   };
 
   return doc;
@@ -545,6 +647,27 @@ function initMockDatabase() {
   const data = getMockData();
   let dataChanged = false;
 
+  if (!data.exercises) {
+    data.exercises = [];
+  }
+  if (data.exercises.length === 0) {
+    const DEFAULT_EXERCISES = [
+      { title: "Bench Press", category: "Chest", type: "Strength", level: "Intermediate", target: "Pectoralis Major", reps: "4 sets x 8-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470" },
+      { title: "Deadlift", category: "Back", type: "Strength", level: "Advanced", target: "Lower Back, Glutes", reps: "3 sets x 5-8 reps", duration: "15 mins", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470" },
+      { title: "Squats", category: "Legs", type: "Strength", level: "Beginner", target: "Quadriceps, Glutes", reps: "4 sets x 10-15 reps", duration: "12 mins", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470" },
+      { title: "HIIT Sprint", category: "Cardio", type: "Fat Burn", level: "Intermediate", target: "Full Body", reps: "10 rounds x 30s", duration: "20 mins", img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470" },
+      { title: "Overhead Press", category: "Shoulder", type: "Muscle Gain", level: "Intermediate", target: "Deltoids", reps: "3 sets x 10-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469" },
+      { title: "Push Ups", category: "Beginner", type: "Endurance", level: "Beginner", target: "Chest, Triceps", reps: "3 sets to failure", duration: "5 mins", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446" },
+    ];
+    data.exercises = DEFAULT_EXERCISES.map(e => ({
+      _id: new mongoose.Types.ObjectId().toString(),
+      ...e,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    dataChanged = true;
+  }
+
   if (!data.admins) {
     data.admins = [];
   }
@@ -556,6 +679,10 @@ function initMockDatabase() {
   const hasSukchain = data.admins.some((a: any) => a.phone === "8400050073");
   const hasAkash = data.admins.some((a: any) => a.uniqueId === "akash1284");
 
+  const adminPasswordVanshika = process.env.INITIAL_ADMIN_PASSWORD || "Vanshika@123";
+  const adminPasswordSukchain = process.env.INITIAL_ADMIN_PASSWORD || "Sukchain@123";
+  const adminPasswordAkash = process.env.INITIAL_ADMIN_PASSWORD || "340515";
+
   if (!hasVanshika) {
     data.admins.push({
       _id: new mongoose.Types.ObjectId().toString(),
@@ -563,7 +690,7 @@ function initMockDatabase() {
       uniqueId: "vanshika16",
       phone: "9588715527",
       email: "vanshikapahal16@gmail.com",
-      password: "Vanshika@123",
+      password: adminPasswordVanshika,
       hashedPassword: "", // will be hashed below
       role: "superadmin",
       isActive: true,
@@ -586,7 +713,7 @@ function initMockDatabase() {
       uniqueId: "sukchain",
       phone: "8400050073",
       email: "sukchain@gmail.com",
-      password: "Sukchain@123",
+      password: adminPasswordSukchain,
       hashedPassword: "", // will be hashed below
       role: "admin",
       isActive: true,
@@ -609,7 +736,7 @@ function initMockDatabase() {
       uniqueId: "akash1284",
       phone: "0000000000",
       email: "akash@onfitness.com",
-      password: "340515",
+      password: adminPasswordAkash,
       hashedPassword: "", // will be hashed below
       role: "superadmin",
       isActive: true,
@@ -623,34 +750,47 @@ function initMockDatabase() {
     data.members = [];
   }
 
-  const hasRahul = data.members.some((m: any) => m.phone === "9999999999" || m.phoneNumber === "9999999999");
-  if (!hasRahul) {
-    data.members.push({
-      _id: new mongoose.Types.ObjectId().toString(),
-      name: "Rahul",
-      fullName: "Rahul",
-      phone: "9999999999",
-      phoneNumber: "9999999999",
-      email: "rahul@gmail.com",
-      address: "Delhi, India",
-      password: "Rahul@123",
-      hashedPassword: "", // will be hashed below
-      membershipPlan: "Gold",
-      membershipDuration: 12,
-      membershipStartDate: new Date().toISOString(),
-      membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-      membershipExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-      totalFee: 1000,
-      totalPaid: 1000,
-      remainingAmount: 0,
-      membershipStatus: "Active",
-      paymentStatus: "Paid",
-      isActive: true,
-      mustChangePassword: false,
-      role: "member",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+  // Remove any legacy mock members from the JSON database
+  const originalLength = data.members.length;
+  data.members = data.members.filter(
+    (m: any) =>
+      m.phone !== "9999999999" &&
+      m.phoneNumber !== "9999999999" &&
+      m.phone !== "9876543210" &&
+      m.phoneNumber !== "9876543210" &&
+      m.email !== "rahul@gmail.com" &&
+      m.email !== "member@gym.com"
+  );
+  if (data.members.length !== originalLength) {
+    dataChanged = true;
+  }
+
+  // Migrate existing members without QR identifiers
+  for (const m of data.members) {
+    if (!m.qrIdentifier) {
+      m.qrIdentifier = "qr_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      m.qrCreatedAt = new Date().toISOString();
+      dataChanged = true;
+    }
+  }
+
+  // Remove orphaned payments and attendance from the JSON database
+  if (!data.payments) {
+    data.payments = [];
+  }
+  const memberIds = new Set(data.members.map((m: any) => m._id.toString()));
+  const origPaymentsLength = data.payments.length;
+  data.payments = data.payments.filter((p: any) => p.memberId && memberIds.has(p.memberId.toString()));
+  if (data.payments.length !== origPaymentsLength) {
+    dataChanged = true;
+  }
+
+  if (!data.attendance) {
+    data.attendance = [];
+  }
+  const origAttendanceLength = data.attendance.length;
+  data.attendance = data.attendance.filter((a: any) => a.memberId && memberIds.has(a.memberId.toString()));
+  if (data.attendance.length !== origAttendanceLength) {
     dataChanged = true;
   }
 
@@ -726,6 +866,10 @@ async function seedDatabaseIfEmpty() {
       ]
     });
 
+    const adminPasswordVanshika = process.env.INITIAL_ADMIN_PASSWORD || "Vanshika@123";
+    const adminPasswordSukchain = process.env.INITIAL_ADMIN_PASSWORD || "Sukchain@123";
+    const adminPasswordAkash = process.env.INITIAL_ADMIN_PASSWORD || "340515";
+
     // 1. Seed Vanshika
     const existingVanshika = await Admin.findOne({
       $or: [{ phone: "9588715527" }, { email: "vanshikapahal16@gmail.com" }]
@@ -737,7 +881,7 @@ async function seedDatabaseIfEmpty() {
         uniqueId: "vanshika16",
         phone: "9588715527",
         email: "vanshikapahal16@gmail.com",
-        password: "Vanshika@123",
+        password: adminPasswordVanshika,
         role: "superadmin",
         isActive: true,
       });
@@ -749,7 +893,7 @@ async function seedDatabaseIfEmpty() {
       existingVanshika.email = "vanshikapahal16@gmail.com";
       existingVanshika.role = "superadmin";
       existingVanshika.isActive = true;
-      existingVanshika.password = "Vanshika@123";
+      existingVanshika.password = adminPasswordVanshika;
       await existingVanshika.save();
     }
 
@@ -764,7 +908,7 @@ async function seedDatabaseIfEmpty() {
         uniqueId: "sukchain",
         phone: "8400050073",
         email: "sukchain@gmail.com",
-        password: "Sukchain@123",
+        password: adminPasswordSukchain,
         role: "admin",
         isActive: true,
       });
@@ -776,7 +920,7 @@ async function seedDatabaseIfEmpty() {
       existingSukchain.email = "sukchain@gmail.com";
       existingSukchain.role = "admin";
       existingSukchain.isActive = true;
-      existingSukchain.password = "Sukchain@123";
+      existingSukchain.password = adminPasswordSukchain;
       await existingSukchain.save();
     }
 
@@ -789,7 +933,7 @@ async function seedDatabaseIfEmpty() {
         uniqueId: "akash1284",
         phone: "0000000000",
         email: "akash@onfitness.com",
-        password: "340515",
+        password: adminPasswordAkash,
         role: "superadmin",
         isActive: true,
       });
@@ -801,80 +945,86 @@ async function seedDatabaseIfEmpty() {
       existingAkash.email = "akash@onfitness.com";
       existingAkash.role = "superadmin";
       existingAkash.isActive = true;
-      existingAkash.password = "340515";
+      existingAkash.password = adminPasswordAkash;
       await existingAkash.save();
     }
 
-    // 3. Seed Rahul
-    const existingRahul = await Member.findOne({
-      $or: [{ phone: "9999999999" }, { email: "rahul@gmail.com" }]
+    // Automatically clean up legacy mock members and their payments from the real database
+    const deletedMembers = await Member.find({
+      $or: [
+        { phone: "9999999999" },
+        { phoneNumber: "9999999999" },
+        { phone: "9876543210" },
+        { phoneNumber: "9876543210" },
+        { email: "rahul@gmail.com" },
+        { email: "member@gym.com" }
+      ]
     });
-    if (!existingRahul) {
-      console.log("🌱 Creating member: Rahul");
-      await Member.create({
-        name: "Rahul",
-        phone: "9999999999",
-        email: "rahul@gmail.com",
-        address: "Delhi, India",
-        password: "Rahul@123",
-        membershipPlan: "Gold",
-        membershipDuration: 12,
-        totalFee: 1000,
-        totalPaid: 1000,
-        mustChangePassword: false,
-        isActive: true,
-        role: "member",
-      });
-    } else {
-      console.log("🌱 Member Rahul already exists. Updating credentials/plan...");
-      existingRahul.name = "Rahul";
-      existingRahul.phone = "9999999999";
-      existingRahul.email = "rahul@gmail.com";
-      existingRahul.address = "Delhi, India";
-      existingRahul.membershipPlan = "Gold";
-      existingRahul.membershipDuration = 12;
-      existingRahul.totalFee = 1000;
-      existingRahul.totalPaid = 1000;
-      existingRahul.mustChangePassword = false;
-      existingRahul.isActive = true;
-      existingRahul.password = "Rahul@123";
-      await existingRahul.save();
+    if (deletedMembers.length > 0) {
+      console.log(`🗑️ Deleting ${deletedMembers.length} legacy mock member(s) from real database...`);
+      const deletedIds = deletedMembers.map(m => m._id);
+      await Member.deleteMany({ _id: { $in: deletedIds } });
+      const PaymentModule = await import("../models/Payment");
+      const Payment = mongoose.models.Payment || PaymentModule.default || PaymentModule;
+      await Payment.deleteMany({ memberId: { $in: deletedIds } });
     }
 
-    // 4. Seed Gym Member
-    const existingGymMember = await Member.findOne({
-      $or: [{ phone: "9876543210" }, { email: "member@gym.com" }]
+    // Clean up any remaining orphaned payment and attendance records from real database
+    const PaymentModule = await import("../models/Payment");
+    const Payment = mongoose.models.Payment || PaymentModule.default || PaymentModule;
+    const allMembers = await Member.find({});
+    const validIds = allMembers.map(m => m._id);
+    const deletedPayments = await Payment.deleteMany({ memberId: { $nin: validIds } });
+    if (deletedPayments.deletedCount > 0) {
+      console.log(`🗑️ Cleaned up ${deletedPayments.deletedCount} orphaned payment records from real database.`);
+    }
+
+    try {
+      const AttendanceModule = await import("../models/Attendance");
+      const Attendance = mongoose.models.Attendance || AttendanceModule.default || AttendanceModule;
+      const deletedAttendance = await Attendance.deleteMany({ memberId: { $nin: validIds } });
+      if (deletedAttendance.deletedCount > 0) {
+        console.log(`🗑️ Cleaned up ${deletedAttendance.deletedCount} orphaned attendance records from real database.`);
+      }
+    } catch (err) {}
+
+    // 3. Seed Default Exercises
+    try {
+      const ExerciseModule = await import("../models/Exercise");
+      const Exercise = mongoose.models.Exercise || ExerciseModule.default || ExerciseModule;
+      const exerciseCount = await Exercise.countDocuments({});
+      if (exerciseCount === 0) {
+        console.log("🌱 Seeding default exercises into real database...");
+        const DEFAULT_EXERCISES = [
+          { title: "Bench Press", category: "Chest", type: "Strength", level: "Intermediate", target: "Pectoralis Major", reps: "4 sets x 8-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470" },
+          { title: "Deadlift", category: "Back", type: "Strength", level: "Advanced", target: "Lower Back, Glutes", reps: "3 sets x 5-8 reps", duration: "15 mins", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470" },
+          { title: "Squats", category: "Legs", type: "Strength", level: "Beginner", target: "Quadriceps, Glutes", reps: "4 sets x 10-15 reps", duration: "12 mins", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470" },
+          { title: "HIIT Sprint", category: "Cardio", type: "Fat Burn", level: "Intermediate", target: "Full Body", reps: "10 rounds x 30s", duration: "20 mins", img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470" },
+          { title: "Overhead Press", category: "Shoulder", type: "Muscle Gain", level: "Intermediate", target: "Deltoids", reps: "3 sets x 10-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469" },
+          { title: "Push Ups", category: "Beginner", type: "Endurance", level: "Beginner", target: "Chest, Triceps", reps: "3 sets to failure", duration: "5 mins", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446" },
+        ];
+        await Exercise.insertMany(DEFAULT_EXERCISES);
+      }
+    } catch (err) {
+      console.error("❌ Failed to seed default exercises:", err);
+    }
+
+    // Migration: Populate missing qrIdentifiers for existing members in real database
+    const membersWithoutQr = await Member.find({
+      $or: [
+        { qrIdentifier: { $exists: false } },
+        { qrIdentifier: null }
+      ]
     });
-    if (!existingGymMember) {
-      console.log("🌱 Creating member: Gym Member");
-      await Member.create({
-        name: "Gym Member",
-        phone: "9876543210",
-        email: "member@gym.com",
-        address: "123 Fitness Street",
-        password: "Member@123",
-        membershipPlan: "Annual",
-        membershipDuration: 12,
-        totalFee: 500,
-        totalPaid: 500,
-        mustChangePassword: false,
-        isActive: true,
-        role: "member",
-      });
-    } else {
-      console.log("🌱 Member Gym Member already exists. Updating credentials/plan...");
-      existingGymMember.name = "Gym Member";
-      existingGymMember.phone = "9876543210";
-      existingGymMember.email = "member@gym.com";
-      existingGymMember.address = "123 Fitness Street";
-      existingGymMember.membershipPlan = "Annual";
-      existingGymMember.membershipDuration = 12;
-      existingGymMember.totalFee = 500;
-      existingGymMember.totalPaid = 500;
-      existingGymMember.mustChangePassword = false;
-      existingGymMember.isActive = true;
-      existingGymMember.password = "Member@123";
-      await existingGymMember.save();
+    if (membersWithoutQr.length > 0) {
+      console.log(`🌱 Migrating ${membersWithoutQr.length} real DB members without QR identifiers...`);
+      const crypto = await import("crypto");
+      for (const m of membersWithoutQr) {
+        m.qrIdentifier = "qr_" + crypto.randomUUID().replace(/-/g, "");
+        m.qrCreatedAt = new Date();
+        await m.save();
+      }
+      console.log("🌱 Real DB QR identifier migration completed successfully.");
     }
 
     console.log("🌱 Idempotent seeding completed successfully.");
@@ -884,6 +1034,15 @@ async function seedDatabaseIfEmpty() {
 }
 
 export async function connectToDatabase() {
+  if (process.env.NODE_ENV === "production" && !process.env.INITIAL_ADMIN_PASSWORD) {
+    throw new Error("INITIAL_ADMIN_PASSWORD environment variable is missing.");
+  }
+
+  if (global.useMockDatabase) {
+    initMockDatabase();
+    return null;
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -907,8 +1066,8 @@ export async function connectToDatabase() {
   } catch (e: any) {
     cached.promise = null;
     cached.conn = null;
-    console.warn("❌ MongoDB connection failed. Activating local JSON database fallback.");
     console.warn("Reason:", e.message);
+    console.warn("❌ MongoDB connection failed. Activating local JSON database fallback.");
     global.useMockDatabase = true;
     global.databaseConnectionError = e.message || String(e);
     initMockDatabase();

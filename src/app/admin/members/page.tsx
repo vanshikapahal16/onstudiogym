@@ -22,6 +22,7 @@ import {
   UserCheck,
   RefreshCw,
   Ban,
+  Shield,
 } from "lucide-react";
 
 interface Member {
@@ -38,6 +39,7 @@ interface Member {
   remainingAmount: number;
   membershipStatus: "Active" | "Expiring Soon" | "Expired" | "Suspended" | "Pending";
   profileImage?: string;
+  role?: string;
 }
 
 export default function MembersPage() {
@@ -287,6 +289,32 @@ export default function MembersPage() {
     }
   };
 
+  const handlePromoteToAdmin = async (member: Member) => {
+    if (!confirm(`Are you sure you want to promote ${member.fullName} to an Administrator?`)) return;
+
+    try {
+      const res = await fetch("/api/admin/management", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "promote",
+          id: member._id,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`${member.fullName} has been successfully promoted to Administrator!`);
+        fetchMembers();
+      } else {
+        alert(data.message || "Failed to promote member");
+      }
+    } catch (error: any) {
+      console.error("Failed to promote", error);
+      alert("An error occurred: " + error.message);
+    }
+  };
+
   const handleCheckIn = async (memberId: string) => {
     try {
       const res = await fetch("/api/attendance/checkin", {
@@ -533,7 +561,14 @@ export default function MembersPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{member.fullName}</p>
+                            <p className="text-sm font-bold text-white group-hover:text-primary transition-colors flex items-center gap-1.5">
+                              {member.fullName}
+                              {member.role === "admin" && (
+                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-primary text-black rounded leading-none">
+                                  Admin
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">{member.phoneNumber}</p>
                           </div>
                         </div>
@@ -608,6 +643,15 @@ export default function MembersPage() {
                               >
                                 <RefreshCw className="w-4 h-4" />
                               </button>
+                              {member.role !== "admin" && (
+                                <button
+                                  title="Promote to Admin"
+                                  onClick={() => handlePromoteToAdmin(member)}
+                                  className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-muted-foreground transition-colors cursor-pointer"
+                                >
+                                  <Shield className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 title="Edit Member"
                                 onClick={() => openEditModal(member)}
@@ -680,7 +724,14 @@ export default function MembersPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-bold text-white truncate">{member.fullName}</h4>
+                    <h4 className="text-base font-bold text-white truncate flex items-center gap-1.5">
+                      {member.fullName}
+                      {member.role === "admin" && (
+                        <span className="inline-block px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-primary text-black rounded leading-none">
+                          Admin
+                        </span>
+                      )}
+                    </h4>
                     <p className="text-xs text-muted-foreground">{member.phoneNumber}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(member.membershipStatus)}`}>
@@ -769,6 +820,15 @@ export default function MembersPage() {
                       <Ban className="w-4 h-4" />
                       <span>{member.membershipStatus === "Suspended" ? "Activate" : "Suspend"}</span>
                     </button>
+                    {member.role !== "admin" && (
+                      <button
+                        onClick={() => handlePromoteToAdmin(member)}
+                        className="py-2 rounded-xl bg-white/5 border border-white/10 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary/10"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Promote</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => openEditModal(member)}
                       className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-blue-500/10"
@@ -877,10 +937,11 @@ export default function MembersPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-primary" /> Email (Optional)
+                        <Mail className="w-3.5 h-3.5 text-primary" /> Email
                       </label>
                       <input
                         type="email"
+                        required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="member@email.com"
@@ -1036,6 +1097,7 @@ export default function MembersPage() {
                       </label>
                       <input
                         type="email"
+                        required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary text-sm"

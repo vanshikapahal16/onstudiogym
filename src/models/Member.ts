@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { addMonths, differenceInDays } from "date-fns";
 
 const MemberSchema = new mongoose.Schema(
@@ -115,6 +116,15 @@ const MemberSchema = new mongoose.Schema(
       type: String,
       default: "member",
     },
+    qrIdentifier: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    qrCreatedAt: {
+      type: Date,
+    },
     resetPasswordToken: {
       type: String,
     },
@@ -141,6 +151,13 @@ MemberSchema.virtual("password")
 // Hash password & Automate fields before validation
 MemberSchema.pre("validate", async function () {
   const self = this as any;
+  
+  // Auto-generate QR identity if not present
+  if (!self.qrIdentifier) {
+    self.qrIdentifier = "qr_" + crypto.randomUUID().replace(/-/g, "");
+    self.qrCreatedAt = new Date();
+  }
+
   // Hash password if plain text was set on virtual
   if (self._password) {
     try {

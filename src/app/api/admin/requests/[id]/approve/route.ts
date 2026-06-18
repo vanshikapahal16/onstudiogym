@@ -2,12 +2,21 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Member from "@/models/Member";
 import { sendSuccess, sendError } from "@/utils/response";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 
 export async function POST(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const decoded = verifyAuthToken(req);
+    if (!decoded) {
+      return sendError("Unauthorized", null, 401);
+    }
+    if (!isAdmin(decoded)) {
+      return sendError("Forbidden: Admin credentials required", null, 403);
+    }
+
     await connectToDatabase();
     const params = await props.params;
     const memberId = params.id;

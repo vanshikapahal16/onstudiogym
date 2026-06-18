@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { verifyAuthTokenEdge, isAdmin } from "@/middleware/auth";
 
 const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
-const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);
+const isMemberApiRoute = createRouteMatcher(["/api/member/(.*)", "/api/attendance(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
@@ -27,16 +27,12 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 2. Member Route Protection (Page & API)
   if (isMemberPageRoute(req) || isMemberApiRoute(req)) {
-    const decoded = await verifyAuthTokenEdge(req);
-    // If not authenticated via custom JWT, verify with Clerk
-    if (!decoded) {
-      const { userId } = await auth();
-      if (!userId) {
-        if (isMemberApiRoute(req)) {
-          return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
-        }
-        return NextResponse.redirect(new URL("/member/login", req.url));
+    const { userId } = await auth();
+    if (!userId) {
+      if (isMemberApiRoute(req)) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
       }
+      return NextResponse.redirect(new URL("/member/login", req.url));
     }
 
     // Note: To avoid importing Node.js-only modules (like mongoose or fs)
@@ -46,10 +42,21 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // 3. Admin Route Protection
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/analytics") ||
+    pathname.startsWith("/api/members") ||
+    pathname.startsWith("/api/payments")
+  ) {
     const decoded = await verifyAuthTokenEdge(req);
     if (!decoded || !isAdmin(decoded)) {
-      if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/analytics")) {
+      if (
+        pathname.startsWith("/api/admin") ||
+        pathname.startsWith("/api/analytics") ||
+        pathname.startsWith("/api/members") ||
+        pathname.startsWith("/api/payments")
+      ) {
         return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
       }
       return NextResponse.redirect(new URL("/admin/login", req.url));

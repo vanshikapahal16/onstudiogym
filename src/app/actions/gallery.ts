@@ -3,6 +3,8 @@
 import { connectToDatabase } from "@/lib/db";
 import Gallery from "@/models/Gallery";
 import { revalidatePath } from "next/cache";
+import { verifyAdminServerAction } from "@/middleware/auth";
+
 
 export type GalleryImage = {
   id: string;
@@ -15,11 +17,8 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
   try {
     await connectToDatabase();
     
-    // Update any old seeded captions in the database
-    await Gallery.updateMany({ caption: "AG ANTIGRAVITY Main Entrance" }, { $set: { caption: "ON FITNESS STUDIO Main Entrance" } });
-    await Gallery.updateMany({ caption: "AG ANTIGRAVITY - Ganaur Sign" }, { $set: { caption: "ON FITNESS STUDIO - Ganaur Sign" } });
-    
     let images = await Gallery.find({}).sort({ order: 1 });
+
     
     // Seed default gallery images if database is empty
     if (images.length === 0) {
@@ -62,6 +61,10 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
 
 export async function addGalleryImage(url: string, caption: string) {
   try {
+    if (!(await verifyAdminServerAction())) {
+      throw new Error("Unauthorized: Admin credentials required.");
+    }
+
     await connectToDatabase();
     const count = await Gallery.countDocuments();
     
@@ -88,6 +91,10 @@ export async function addGalleryImage(url: string, caption: string) {
 
 export async function removeGalleryImage(id: string) {
   try {
+    if (!(await verifyAdminServerAction())) {
+      throw new Error("Unauthorized: Admin credentials required.");
+    }
+
     await connectToDatabase();
     await Gallery.findByIdAndDelete(id);
     revalidatePath("/");
@@ -100,6 +107,10 @@ export async function removeGalleryImage(id: string) {
 
 export async function updateImageCaption(id: string, caption: string) {
   try {
+    if (!(await verifyAdminServerAction())) {
+      throw new Error("Unauthorized: Admin credentials required.");
+    }
+
     await connectToDatabase();
     await Gallery.findByIdAndUpdate(id, { caption });
     revalidatePath("/");

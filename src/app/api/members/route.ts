@@ -5,27 +5,36 @@ import Payment from "@/models/Payment";
 import { uploadImage } from "@/lib/cloudinary";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { sendSuccess, sendUnauthorized, sendError } from "@/utils/response";
+import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 
 // GET /api/members (All members with search, filters, and pagination)
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return sendUnauthorized();
-    }
+    // 1. Try custom admin JWT first (used by Admin Portal)
+    const decoded = verifyAuthToken(req);
+    const isCustomAdmin = isAdmin(decoded);
     
-    // Check if the user is an admin
-    const { sessionClaims } = await auth();
-    let emailAddress = (sessionClaims as any)?.email;
-    if (!emailAddress) {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      emailAddress = user.emailAddresses[0]?.emailAddress;
-    }
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+    let isUserAdmin = isCustomAdmin;
+    let hasAccess = isCustomAdmin;
 
-    if (!isUserAdmin) {
+    // 2. If not a custom admin, try Clerk auth (used by Member Portal or Clerk admins)
+    if (!hasAccess) {
+      const { userId } = await auth();
+      if (userId) {
+        const { sessionClaims } = await auth();
+        let emailAddress = (sessionClaims as any)?.email;
+        if (!emailAddress) {
+          const client = await clerkClient();
+          const user = await client.users.getUser(userId);
+          emailAddress = user.emailAddresses[0]?.emailAddress;
+        }
+        const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+        isUserAdmin = !!(emailAddress && adminEmails.includes(emailAddress.toLowerCase()));
+        hasAccess = isUserAdmin;
+      }
+    }
+
+    if (!hasAccess) {
       return sendUnauthorized();
     }
 
@@ -49,6 +58,9 @@ export async function GET(req: NextRequest) {
         { phoneNumber: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
       ];
+      if (/^[0-9a-fA-F]{24}$/.test(search)) {
+        query.$or.push({ _id: search });
+      }
     }
 
     if (status) {
@@ -79,23 +91,31 @@ export async function GET(req: NextRequest) {
 // POST /api/members (Admin adds a member manually)
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return sendUnauthorized();
-    }
+    // 1. Try custom admin JWT first (used by Admin Portal)
+    const decoded = verifyAuthToken(req);
+    const isCustomAdmin = isAdmin(decoded);
     
-    // Check if the user is an admin
-    const { sessionClaims } = await auth();
-    let emailAddress = (sessionClaims as any)?.email;
-    if (!emailAddress) {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      emailAddress = user.emailAddresses[0]?.emailAddress;
-    }
-    const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
-    const isUserAdmin = emailAddress && adminEmails.includes(emailAddress.toLowerCase());
+    let isUserAdmin = isCustomAdmin;
+    let hasAccess = isCustomAdmin;
 
-    if (!isUserAdmin) {
+    // 2. If not a custom admin, try Clerk auth (used by Member Portal or Clerk admins)
+    if (!hasAccess) {
+      const { userId } = await auth();
+      if (userId) {
+        const { sessionClaims } = await auth();
+        let emailAddress = (sessionClaims as any)?.email;
+        if (!emailAddress) {
+          const client = await clerkClient();
+          const user = await client.users.getUser(userId);
+          emailAddress = user.emailAddresses[0]?.emailAddress;
+        }
+        const adminEmails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
+        isUserAdmin = !!(emailAddress && adminEmails.includes(emailAddress.toLowerCase()));
+        hasAccess = isUserAdmin;
+      }
+    }
+
+    if (!hasAccess) {
       return sendUnauthorized();
     }
 

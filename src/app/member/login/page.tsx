@@ -2,17 +2,19 @@
 
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useAuth, useClerk } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import { UserCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function MemberLoginForm() {
+function LoginFormContent() {
   const { signIn, isLoaded } = useSignIn();
   const { isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/member";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,8 +26,8 @@ export default function MemberLoginForm() {
     try {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/sso-callback?complete=true",
+        redirectUrl: `/sso-callback?redirect=${encodeURIComponent(redirect)}`,
+        redirectUrlComplete: `/sso-callback?complete=true&redirect=${encodeURIComponent(redirect)}`,
       });
     } catch (err: any) {
       console.error("OAuth error:", err);
@@ -83,7 +85,7 @@ export default function MemberLoginForm() {
                 <button
                   onClick={() => {
                     setIsSubmitting(true);
-                    router.push("/member");
+                    router.push(redirect);
                   }}
                   disabled={isSubmitting}
                   className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00FFB2] to-[#3B82F6] text-black font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-[0_0_20px_rgba(0,255,178,0.25)] flex items-center justify-center gap-2 group text-sm cursor-pointer disabled:opacity-50"
@@ -140,5 +142,17 @@ export default function MemberLoginForm() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function MemberLoginForm() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-6 text-white text-sm font-sans uppercase tracking-widest">
+        Loading...
+      </div>
+    }>
+      <LoginFormContent />
+    </Suspense>
   );
 }

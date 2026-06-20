@@ -765,6 +765,42 @@ function initMockDatabase() {
     dataChanged = true;
   }
 
+  // Seed default Test Member for development check-ins
+  const hasTestMember = data.members.some((m: any) => m.email === "testmember@gmail.com");
+  if (!hasTestMember) {
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    data.members.push({
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Test Member",
+      fullName: "Test Member",
+      phone: "1234567890",
+      phoneNumber: "1234567890",
+      email: "testmember@gmail.com",
+      address: "123 Gym Street",
+      membershipPlan: "Annual",
+      membershipDuration: 12,
+      membershipStartDate: new Date().toISOString(),
+      membershipEndDate: nextYear.toISOString(),
+      membershipExpiry: nextYear.toISOString(),
+      totalFee: 1000,
+      totalPaid: 1000,
+      remainingAmount: 0,
+      membershipStatus: "Active",
+      paymentStatus: "Paid",
+      isActive: true,
+      approved: true,
+      membershipActive: true,
+      mustChangePassword: false,
+      role: "member",
+      qrIdentifier: "qr_testmember123456789",
+      qrCreatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    dataChanged = true;
+  }
+
   // Migrate existing members without QR identifiers
   for (const m of data.members) {
     if (!m.qrIdentifier) {
@@ -967,6 +1003,39 @@ async function seedDatabaseIfEmpty() {
       const PaymentModule = await import("../models/Payment");
       const Payment = mongoose.models.Payment || PaymentModule.default || PaymentModule;
       await Payment.deleteMany({ memberId: { $in: deletedIds } });
+    }
+
+    // Seed default Test Member for development check-ins in real database
+    const existingTestMember = await Member.findOne({ email: "testmember@gmail.com" });
+    if (!existingTestMember) {
+      console.log("🌱 Creating test member: Test Member");
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+      await Member.create({
+        name: "Test Member",
+        fullName: "Test Member",
+        phone: "1234567890",
+        phoneNumber: "1234567890",
+        email: "testmember@gmail.com",
+        address: "123 Gym Street",
+        membershipPlan: "Annual",
+        membershipDuration: 12,
+        membershipStartDate: new Date(),
+        membershipEndDate: nextYear,
+        membershipExpiry: nextYear,
+        totalFee: 1000,
+        totalPaid: 1000,
+        remainingAmount: 0,
+        membershipStatus: "Active",
+        paymentStatus: "Paid",
+        isActive: true,
+        approved: true,
+        membershipActive: true,
+        mustChangePassword: false,
+        role: "member",
+        qrIdentifier: "qr_testmember123456789",
+        qrCreatedAt: new Date()
+      });
     }
 
     // Clean up any remaining orphaned payment and attendance records from real database

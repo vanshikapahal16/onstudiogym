@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
     const query = isObjectId ? { _id: searchVal } : { email: searchVal.toLowerCase() };
 
     // Find the member by email or ID
+    console.log("--> checkin-by-email searchVal:", searchVal, "query:", query);
     const member = await Member.findOne(query);
+    console.log("--> checkin-by-email found member:", member);
     if (!member) {
       return sendNotFound("No active member found with this email address.");
     }

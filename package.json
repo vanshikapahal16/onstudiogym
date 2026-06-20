@@ -19,6 +19,7 @@
     "cookie": "^1.1.1",
     "date-fns": "^4.2.1",
     "framer-motion": "^12.39.0",
+    "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.3",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.16.0",

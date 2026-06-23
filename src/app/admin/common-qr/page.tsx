@@ -9,7 +9,7 @@ export default function CommonQRPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setCheckinUrl(`${window.location.origin}/checkin`);
+      setCheckinUrl(`${window.location.origin}/attendance/scan`);
     }
   }, []);
 

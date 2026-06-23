@@ -1,65 +1,64 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Attendance from "@/models/Attendance";
-import Member from "@/models/Member";
 import { verifyAuthToken, isAdmin } from "@/middleware/auth";
 import { sendSuccess, sendUnauthorized, sendError } from "@/utils/response";
 
-// GET /api/attendance/history - Paginated, filterable attendance history list
 export async function GET(req: NextRequest) {
   try {
     const decoded = verifyAuthToken(req);
-    if (!decoded || !isAdmin(decoded)) {
-      return sendUnauthorized("Only administrators can retrieve attendance history");
+    if (!decoded) {
+      return sendUnauthorized("You must be logged in.");
     }
 
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const skip = (page - 1) * limit;
-
-    const startDateStr = searchParams.get("startDate");
-    const endDateStr = searchParams.get("endDate");
-    const search = searchParams.get("search") || "";
-    const source = searchParams.get("source") || "";
-
+    
+    // If not an admin, they can only view their own history.
+    const isUserAdmin = isAdmin(decoded);
+    const userIdFilter = searchParams.get("userId") || searchParams.get("memberId");
+    
     const query: any = {};
+    if (!isUserAdmin) {
+      query.userId = decoded.id;
+    } else if (userIdFilter) {
+      query.userId = userIdFilter;
+    }
 
-    // Date range filter
-    if (startDateStr || endDateStr) {
-      query.checkIn = {};
-      if (startDateStr) {
-        const start = new Date(startDateStr);
-        start.setHours(0, 0, 0, 0);
-        query.checkIn.$gte = start;
+    const search = searchParams.get("search") || "";
+    const email = searchParams.get("email") || "";
+    const date = searchParams.get("date") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
+    
+    if (isUserAdmin) {
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ];
       }
-      if (endDateStr) {
-        const end = new Date(endDateStr);
-        end.setHours(23, 59, 59, 999);
-        query.checkIn.$lte = end;
+      if (email) {
+        query.email = { $regex: email, $options: "i" };
       }
     }
 
-    // Source filter (e.g. 'QR Scan' or 'Manual')
-    if (source) {
-      query.checkInSource = source;
+    if (date) {
+      query.date = date;
+    } else if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = startDate;
+      if (endDate) query.date.$lte = endDate;
     }
 
-    // Name search filter
-    if (search) {
-      const matchedMembers = await Member.find({
-        name: { $regex: search, $options: "i" },
-      }).select("_id");
-      const memberIds = matchedMembers.map((m) => m._id);
-      query.memberId = { $in: memberIds };
-    }
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const skip = (page - 1) * limit;
 
     const total = await Attendance.countDocuments(query);
     const logs = await Attendance.find(query)
-      .populate("memberId", "fullName phoneNumber profileImage")
-      .sort({ checkIn: -1 })
+      .sort({ date: -1, time: -1 })
       .skip(skip)
       .limit(limit);
 

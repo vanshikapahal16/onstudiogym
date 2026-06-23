@@ -49,7 +49,7 @@ async function runE2E() {
     // 4. Test View Profile API
     console.log("➡️ Testing GET /api/member/profile...");
     const profileRes = await fetch(`${BASE_URL}/api/member/profile`, { headers });
-    const profileJson = await profileRes.json();
+    const profileJson = await profileRes.json() as any;
     
     if (!profileRes.ok || !profileJson.success) {
       throw new Error(`Profile load failed: ${JSON.stringify(profileJson)}`);
@@ -73,7 +73,7 @@ async function runE2E() {
         profileImage: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", // 1x1 mock PNG
       }),
     });
-    const editJson = await editRes.json();
+    const editJson = await editRes.json() as any;
     if (!editRes.ok || !editJson.success) {
       throw new Error(`Profile edit failed: ${JSON.stringify(editJson)}`);
     }
@@ -88,27 +88,31 @@ async function runE2E() {
     const finalEmail = "e2etest_updated@onfitness.com";
 
     // 6. Test Member Gym Check-In
-    console.log("➡️ Testing POST /api/attendance/checkin-common...");
-    const checkinRes = await fetch(`${BASE_URL}/api/attendance/checkin-common`, {
+    console.log("➡️ Testing POST /api/attendance/mark...");
+    const checkinRes = await fetch(`${BASE_URL}/api/attendance/mark`, {
       method: "POST",
       headers,
     });
-    const checkinJson = await checkinRes.json();
+    const checkinJson = await checkinRes.json() as any;
     if (!checkinRes.ok || !checkinJson.success) {
       throw new Error(`Check-in failed: ${JSON.stringify(checkinJson)}`);
     }
     console.log("✅ Check-in successful.");
-    if (checkinJson.data.member.attendanceCount !== 1) {
+    
+    // Verify attendanceCount in member profile
+    const profileVerifyRes = await fetch(`${BASE_URL}/api/member/profile`, { headers });
+    const profileVerifyJson = await profileVerifyRes.json() as any;
+    if (profileVerifyJson.data.member.attendanceCount !== 1) {
       throw new Error("Attendance count should be 1.");
     }
 
     // 7. Test Duplicate Check-in Prevention
     console.log("➡️ Testing duplicate check-in protection...");
-    const dupCheckinRes = await fetch(`${BASE_URL}/api/attendance/checkin-common`, {
+    const dupCheckinRes = await fetch(`${BASE_URL}/api/attendance/mark`, {
       method: "POST",
       headers,
     });
-    const dupCheckinJson = await dupCheckinRes.json();
+    const dupCheckinJson = await dupCheckinRes.json() as any;
     if (dupCheckinRes.ok || dupCheckinJson.success) {
       throw new Error("Duplicate check-in should have failed!");
     }
@@ -135,7 +139,7 @@ async function runE2E() {
 
     // Fetch notifications
     const getNotifRes = await fetch(`${BASE_URL}/api/notifications`, { headers });
-    const getNotifJson = await getNotifRes.json();
+    const getNotifJson = await getNotifRes.json() as any;
     if (!getNotifRes.ok || !getNotifJson.success) {
       throw new Error(`Fetch notifications failed: ${JSON.stringify(getNotifJson)}`);
     }
@@ -151,7 +155,7 @@ async function runE2E() {
       method: "PUT",
       headers,
     });
-    const readNotifJson = await readNotifRes.json();
+    const readNotifJson = await readNotifRes.json() as any;
     if (!readNotifRes.ok || !readNotifJson.success) {
       throw new Error(`Mark all read failed: ${JSON.stringify(readNotifJson)}`);
     }
@@ -163,7 +167,7 @@ async function runE2E() {
       method: "DELETE",
       headers,
     });
-    const delSingleJson = await delSingleRes.json();
+    const delSingleJson = await delSingleRes.json() as any;
     if (!delSingleRes.ok || !delSingleJson.success) {
       throw new Error(`Delete single failed: ${JSON.stringify(delSingleJson)}`);
     }
@@ -175,7 +179,7 @@ async function runE2E() {
       method: "DELETE",
       headers,
     });
-    const clearAllJson = await clearAllRes.json();
+    const clearAllJson = await clearAllRes.json() as any;
     if (!clearAllRes.ok || !clearAllJson.success) {
       throw new Error(`Clear all failed: ${JSON.stringify(clearAllJson)}`);
     }
@@ -183,7 +187,7 @@ async function runE2E() {
 
     // Verify notifications are empty now
     const verifyNotifRes = await fetch(`${BASE_URL}/api/notifications`, { headers });
-    const verifyNotifJson = await verifyNotifRes.json();
+    const verifyNotifJson = await verifyNotifRes.json() as any;
     if (verifyNotifJson.data.notifications.length !== 0) {
       throw new Error("Notifications were not cleared.");
     }
@@ -192,7 +196,7 @@ async function runE2E() {
     // 9. Test Exercise Library API
     console.log("➡️ Testing GET /api/exercises...");
     const execRes = await fetch(`${BASE_URL}/api/exercises`);
-    const execJson = await execRes.json();
+    const execJson = await execRes.json() as any;
     if (!execRes.ok || !execJson.success) {
       throw new Error(`Fetch exercises failed: ${JSON.stringify(execJson)}`);
     }
@@ -206,7 +210,7 @@ async function runE2E() {
     // 10. Test Payments API
     console.log(`➡️ Testing GET /api/payments/${memberId}...`);
     const payRes = await fetch(`${BASE_URL}/api/payments/${memberId}`, { headers });
-    const payJson = await payRes.json();
+    const payJson = await payRes.json() as any;
     if (!payRes.ok || !payJson.success) {
       throw new Error(`Fetch payments failed: ${JSON.stringify(payJson)}`);
     }
@@ -214,7 +218,7 @@ async function runE2E() {
 
     // Clean up database records
     console.log("🧹 Cleaning up database test records... (E2E Test Member)");
-    await Attendance.deleteMany({ memberId });
+    await Attendance.deleteMany({ userId: memberId });
     await Notification.deleteMany({ userId: memberId });
     await Member.deleteMany({ _id: memberId });
     await Member.deleteMany({ email: finalEmail });
@@ -228,7 +232,7 @@ async function runE2E() {
     
     // Cleanup on error
     try {
-      await Attendance.deleteMany({ memberId });
+      await Attendance.deleteMany({ userId: memberId });
       await Notification.deleteMany({ userId: memberId });
       await Member.deleteMany({ _id: memberId });
       await Member.deleteMany({ email: "e2etest@onfitness.com" });

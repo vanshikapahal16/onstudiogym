@@ -1104,7 +1104,7 @@ async function seedDatabaseIfEmpty() {
 
 export async function connectToDatabase() {
   if (process.env.NODE_ENV === "production" && !process.env.INITIAL_ADMIN_PASSWORD) {
-    throw new Error("INITIAL_ADMIN_PASSWORD environment variable is missing.");
+    console.warn("⚠️ INITIAL_ADMIN_PASSWORD environment variable is missing.");
   }
 
   if (global.useMockDatabase) {

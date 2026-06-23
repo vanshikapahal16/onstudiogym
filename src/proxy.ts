@@ -129,10 +129,3 @@ export default hasValidClerk
     })
   : fallbackMiddleware;
 
-export const config = {
-  matcher: [
-    // Skip static files, images, etc.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
-  ],
-};
-

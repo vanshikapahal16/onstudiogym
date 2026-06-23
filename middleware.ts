@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { verifyAuthTokenEdge, isAdmin } from "@/middleware/auth";
+import { verifyAuthTokenEdge, isAdmin } from "@/middleware/auth-edge";
 
 const isMemberPageRoute = createRouteMatcher(["/member(.*)"]);
 const isMemberApiRoute = createRouteMatcher(["/api/member(.*)", "/api/attendance(.*)"]);

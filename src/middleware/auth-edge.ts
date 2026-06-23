@@ -1,10 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { NextRequest } from "next/server";
 
 const JWT_SECRET = process.env.JWT_SECRET || "temporary_local_secret_key_1284";
-if (JWT_SECRET === "temporary_local_secret_key_1284") {
-  console.warn("⚠️ JWT_SECRET environment variable is missing. Using local development secret.");
-}
 
 export interface DecodedToken {
   id: string;
@@ -14,53 +10,6 @@ export interface DecodedToken {
 // Helper to check if a decoded token is an administrator role
 export function isAdmin(decoded: DecodedToken | null): boolean {
   return !!decoded && (decoded.role === "admin" || decoded.role === "superadmin");
-}
-
-// Generate JWT token and set in cookie
-export function setAuthCookie<T = any>(res: NextResponse<T>, payload: DecodedToken): NextResponse<T> {
-  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
-  
-  res.cookies.set({
-    name: "token",
-    value: token,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: "/",
-  });
-
-  return res;
-}
-
-// Clear JWT auth cookie
-export function clearAuthCookie<T = any>(res: NextResponse<T>): NextResponse<T> {
-  res.cookies.set({
-    name: "token",
-    value: "",
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 0,
-    path: "/",
-  });
-
-  return res;
-}
-
-// Verify auth token from request
-export function verifyAuthToken(req: NextRequest): DecodedToken | null {
-  const token = req.cookies.get("token")?.value;
-
-  if (!token) return null;
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
-    return decoded;
-  } catch (error) {
-    console.error("🔍 JWT Verification failed:", error);
-    return null;
-  }
 }
 
 // Edge-compatible verification of auth token from request using Web Crypto API
@@ -126,19 +75,3 @@ export async function verifyAuthTokenEdge(req: NextRequest): Promise<DecodedToke
     return null;
   }
 }
-
-// Helper to verify administrator authentication in Next.js Server Actions
-export async function verifyAdminServerAction(): Promise<boolean> {
-  try {
-    const { cookies } = await import("next/headers");
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (!token) return false;
-    
-    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
-    return isAdmin(decoded);
-  } catch {
-    return false;
-  }
-}
-

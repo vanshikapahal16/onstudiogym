@@ -22,7 +22,8 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     }
 
     // Direct Cloudinary CDN Deletion
-    await deleteImage(galleryItem.publicId);
+    const isVideo = galleryItem.url.includes("/video/upload/") || galleryItem.url.match(/\.(mp4|webm|ogg|mov)/i) !== null;
+    await deleteImage(galleryItem.publicId, isVideo);
 
     // Database deletion
     await Gallery.findByIdAndDelete(params.id);

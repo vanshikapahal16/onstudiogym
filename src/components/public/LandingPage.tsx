@@ -498,21 +498,33 @@ export default function LandingPage({ initialGalleryImages }: { initialGalleryIm
               ...initialGalleryImages,
               { id: "static_owner_flexing", url: "/images/owner/owner_flexing.png", caption: "Sukchain Pahal - Peak Hypertrophy", order: 10 },
               { id: "static_owner_posing", url: "/images/owner/owner_posing.png", caption: "Sukchain Pahal - Competition Form", order: 11 },
-            ].filter((img, idx, arr) => arr.findIndex(x => x.url === img.url) === idx).map((img, i) => (
-              <motion.div
-                key={img.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="relative rounded-2xl overflow-hidden group cursor-pointer break-inside-avoid border border-white/10"
-              >
-                <img src={img.url} alt={img.caption} className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                  <p className="text-white font-bold text-lg translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{img.caption}</p>
-                </div>
-              </motion.div>
-            ))}
+            ].filter((img, idx, arr) => arr.findIndex(x => x.url === img.url) === idx).map((img, i) => {
+              const isVideo = img.url.includes("/video/upload/") || img.url.match(/\.(mp4|webm|ogg|mov)/i) !== null;
+              return (
+                <motion.div
+                  key={img.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="relative rounded-2xl overflow-hidden group cursor-pointer break-inside-avoid border border-white/10"
+                >
+                  {isVideo ? (
+                    <video 
+                      src={img.url} 
+                      controls 
+                      className="w-full h-auto object-cover"
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img src={img.url} alt={img.caption} className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pointer-events-none">
+                    <p className="text-white font-bold text-lg translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{img.caption}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

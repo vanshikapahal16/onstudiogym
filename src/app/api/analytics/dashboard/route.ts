@@ -56,6 +56,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Calculate Today's Collection
+    let todayCollection = 0;
+    try {
+      const allPayments = await Payment.find({});
+      allPayments.forEach((p: any) => {
+        const pDate = new Date(p.date);
+        if (pDate >= startOfToday) {
+          todayCollection += p.amount || 0;
+        }
+      });
+    } catch (e) {
+      console.error("Failed to calculate today's collection:", e);
+    }
+
     // 4. Inactive members (no visit in last 15 days)
     const fifteenDaysAgo = subDays(today, 15);
     const inactiveMembersCount = await Member.countDocuments({
@@ -105,6 +119,7 @@ export async function GET(req: NextRequest) {
         pendingDues,
         inactiveMembersCount,
         pendingMembers,
+        todayCollection,
       },
       liveOccupancy,
     });

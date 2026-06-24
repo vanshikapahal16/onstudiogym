@@ -122,7 +122,7 @@ export default function PaymentsPage() {
 
   const selectMember = (m: MemberSearchResult) => {
     setSelectedMember(m);
-    setPayAmount(m.remainingAmount.toString());
+    setPayAmount("");
     setSearchQuery(m.fullName);
     setShowSearchResults(false);
     setErrorMsg("");
@@ -194,16 +194,16 @@ export default function PaymentsPage() {
               <IndianRupee className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Gross Revenue (Total)</p>
+              <p className="text-sm text-muted-foreground">Total Revenue Collected</p>
               <h3 className="text-2xl font-extrabold text-white">₹ {totalRevenue.toLocaleString()}</h3>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-primary relative z-10">
             <ArrowUpRight className="w-4 h-4" />
-            <span>Operational Gross Collections</span>
+            <span>Total money collected from members</span>
           </div>
         </motion.div>
-
+ 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -216,16 +216,16 @@ export default function PaymentsPage() {
               <Clock className="w-6 h-6 text-yellow-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Outstanding Dues</p>
+              <p className="text-sm text-muted-foreground">Pending Amount</p>
               <h3 className="text-2xl font-extrabold text-white">₹ {pendingDues.toLocaleString()}</h3>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-yellow-500 relative z-10">
             <AlertCircle className="w-4 h-4" />
-            <span>Uncollected balance from accounts</span>
+            <span>Amount yet to be collected</span>
           </div>
         </motion.div>
-
+ 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -243,7 +243,7 @@ export default function PaymentsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground relative z-10">
-            <span>Aggregated cash/online receipts today</span>
+            <span>Total money collected today</span>
           </div>
         </motion.div>
       </div>
@@ -260,7 +260,7 @@ export default function PaymentsPage() {
           <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
             <h3 className="text-lg font-bold text-white">Recent Transactions</h3>
           </div>
-          <div className="flex-1 overflow-x-auto p-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {loading ? (
               <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
                 <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
@@ -272,53 +272,75 @@ export default function PaymentsPage() {
                 <p className="text-sm text-muted-foreground">No financial transactions recorded yet.</p>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse min-w-[500px]">
-                <thead>
-                  <tr className="border-b border-white/5 text-xs text-muted-foreground uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">Member Details</th>
-                    <th className="pb-3 font-semibold">Invoice ID</th>
-                    <th className="pb-3 font-semibold">Amount Paid</th>
-                    <th className="pb-3 font-semibold">Receipt Status</th>
-                    <th className="pb-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
+              <>
+                {/* Desktop Table View */}
+                <table className="hidden md:table w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/5 text-xs text-muted-foreground uppercase tracking-wider">
+                      <th className="pb-3 font-semibold">Member Name & Phone</th>
+                      <th className="pb-3 font-semibold">Date</th>
+                      <th className="pb-3 font-semibold">Amount Paid</th>
+                      <th className="pb-3 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-sm">
+                    {payments.map((p) => (
+                      <tr key={p._id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-4">
+                          <p className="text-sm font-bold text-white">{p.memberId?.fullName || "Gym Member"}</p>
+                          <p className="text-xs text-muted-foreground">{p.memberId?.phoneNumber || "N/A"}</p>
+                        </td>
+                        <td className="py-4 text-xs text-muted-foreground">
+                          {new Date(p.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="py-4 font-bold text-primary">
+                          ₹ {p.amount.toLocaleString()}
+                        </td>
+                        <td className="py-4 text-right">
+                          <button
+                            onClick={() => setActiveInvoice(p)}
+                            title="Print Receipt"
+                            className="p-1.5 rounded bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all cursor-pointer"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Mobile Stacked Card View */}
+                <div className="block md:hidden space-y-4">
                   {payments.map((p) => (
-                    <tr key={p._id} className="hover:bg-white/5 transition-colors">
-                      <td className="py-4">
-                        <p className="text-sm font-bold text-white">{p.memberId?.fullName || "Gym Member"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(p.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                        </p>
-                      </td>
-                      <td className="py-4">
-                        <span className="text-xs font-mono bg-white/5 px-2.5 py-1 rounded border border-white/10 text-white">
-                          {p.invoiceId}
-                        </span>
-                      </td>
-                      <td className="py-4 font-bold text-primary">
-                        ₹ {p.amount.toLocaleString()}
-                      </td>
-                      <td className="py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                          p.status === "Paid" ? "bg-primary/10 text-primary border-primary/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                        }`}>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="py-4 text-right">
+                    <div key={p._id} className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-bold text-white">{p.memberId?.fullName || "Gym Member"}</p>
+                          <p className="text-xs text-muted-foreground">{p.memberId?.phoneNumber || "N/A"}</p>
+                        </div>
                         <button
                           onClick={() => setActiveInvoice(p)}
                           title="Print Receipt"
-                          className="p-1.5 rounded bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all cursor-pointer"
+                          className="p-2 rounded bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all cursor-pointer"
                         >
                           <Printer className="w-4 h-4" />
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Date:</span>
+                        <span className="text-white">
+                          {new Date(p.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Amount Paid:</span>
+                        <span className="font-bold text-primary">₹ {p.amount.toLocaleString()}</span>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </motion.div>
@@ -408,19 +430,35 @@ export default function PaymentsPage() {
               {selectedMember && (
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Contract Fee:</span>
+                    <span className="text-muted-foreground">Membership Fee:</span>
                     <span className="text-white font-semibold">₹{selectedMember.totalFee.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs border-t border-white/10 pt-2 font-bold">
-                    <span className="text-white">Outstanding Dues:</span>
-                    <span className="text-yellow-500">₹{selectedMember.remainingAmount.toLocaleString()}</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Already Paid:</span>
+                    <span className="text-primary font-semibold">₹{(selectedMember.totalFee - selectedMember.remainingAmount).toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between text-xs border-t border-white/10 pt-2">
+                    <span className="text-white">Remaining Amount:</span>
+                    <span className="text-yellow-500 font-semibold">₹{selectedMember.remainingAmount.toLocaleString()}</span>
+                  </div>
+                  {payAmount && !isNaN(parseFloat(payAmount)) && parseFloat(payAmount) > 0 && (
+                    <div className="border-t border-dashed border-white/10 pt-2 space-y-1 bg-primary/5 -mx-4 px-4 py-2 mt-2">
+                      <div className="flex justify-between text-xs font-bold text-primary">
+                        <span>New Total Paid:</span>
+                        <span>₹{((selectedMember.totalFee - selectedMember.remainingAmount) + parseFloat(payAmount)).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-emerald-400">
+                        <span>New Remaining:</span>
+                        <span>₹{Math.max(0, selectedMember.remainingAmount - parseFloat(payAmount)).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Amount Received */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Amount to Collect (₹)</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">New Amount Received (₹)</label>
                 <div className="relative">
                   <IndianRupee className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                   <input

@@ -59,18 +59,35 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
   }
 }
 
-export async function addGalleryImage(url: string, caption: string) {
+export async function addGalleryImage(fileStr: string, caption: string) {
   try {
     if (!(await verifyAdminServerAction())) {
       throw new Error("Unauthorized: Admin credentials required.");
     }
 
     await connectToDatabase();
+
+    let imageUrl = "/images/gym/entrance_1.png";
+    let publicId = `upload_${Date.now()}`;
+
+    if (fileStr && fileStr.startsWith("data:")) {
+      try {
+        const { uploadImage } = await import("@/lib/cloudinary");
+        const uploadResult = await uploadImage(fileStr);
+        imageUrl = uploadResult.url;
+        publicId = uploadResult.publicId;
+      } catch (err) {
+        console.error("Failed to upload gallery image to Cloudinary:", err);
+      }
+    } else if (fileStr) {
+      imageUrl = fileStr;
+    }
+
     const count = await Gallery.countDocuments();
     
     const newImage = await Gallery.create({
-      publicId: `upload_${Date.now()}`,
-      url,
+      publicId,
+      url: imageUrl,
       caption,
       order: count,
     });
@@ -96,6 +113,18 @@ export async function removeGalleryImage(id: string) {
     }
 
     await connectToDatabase();
+
+    const img = await Gallery.findById(id);
+    if (img && img.publicId) {
+      try {
+        const { deleteImage } = await import("@/lib/cloudinary");
+        const isVideo = img.url.includes("/video/upload/") || img.url.match(/\.(mp4|webm|ogg|mov)/i) !== null;
+        await deleteImage(img.publicId, isVideo);
+      } catch (e) {
+        console.error("Failed to delete from Cloudinary:", e);
+      }
+    }
+
     await Gallery.findByIdAndDelete(id);
     revalidatePath("/");
     revalidatePath("/admin/gallery");

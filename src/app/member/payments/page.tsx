@@ -255,44 +255,81 @@ export default function MemberPayments() {
               No transactions logged yet.
             </div>
           ) : (
-            <table className="w-full text-left border-collapse min-w-[500px]">
-              <thead>
-                <tr className="border-b border-white/10 text-xs text-muted-foreground uppercase tracking-wider">
-                  <th className="pb-3 font-semibold">Invoice ID</th>
-                  <th className="pb-3 font-semibold">Date</th>
-                  <th className="pb-3 font-semibold">Amount Paid</th>
-                  <th className="pb-3 font-semibold">Status</th>
-                  <th className="pb-3 font-semibold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
+            <>
+              {/* Desktop Table View */}
+              <table className="hidden md:table w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 text-xs text-muted-foreground uppercase tracking-wider">
+                    <th className="pb-3 font-semibold">Invoice ID</th>
+                    <th className="pb-3 font-semibold">Date</th>
+                    <th className="pb-3 font-semibold">Amount Paid</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                    <th className="pb-3 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {payments.map((invoice) => (
+                    <tr key={invoice._id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                      <td className="py-4 font-mono font-bold text-white">{invoice.invoiceId}</td>
+                      <td className="py-4 text-muted-foreground">
+                        {new Date(invoice.date).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="py-4 font-bold text-primary">₹{invoice.amount.toLocaleString()}</td>
+                      <td className="py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                          invoice.status === "Paid" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                        }`}>
+                          {invoice.status}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right">
+                        <button 
+                          onClick={() => setActiveInvoice(invoice)}
+                          className="text-muted-foreground hover:text-primary transition-all p-1.5 rounded bg-white/5 border border-white/10 cursor-pointer"
+                          title="Print Receipt"
+                        >
+                          <Printer className="w-4 h-4 inline" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile Stacked Card View */}
+              <div className="block md:hidden space-y-4">
                 {payments.map((invoice) => (
-                  <tr key={invoice._id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                    <td className="py-4 font-mono font-bold text-white">{invoice.invoiceId}</td>
-                    <td className="py-4 text-muted-foreground">
-                      {new Date(invoice.date).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}
-                    </td>
-                    <td className="py-4 font-bold text-primary">₹{invoice.amount.toLocaleString()}</td>
-                    <td className="py-4">
+                  <div key={invoice._id} className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono font-bold text-white text-sm">{invoice.invoiceId}</span>
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                         invoice.status === "Paid" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                       }`}>
                         {invoice.status}
                       </span>
-                    </td>
-                    <td className="py-4 text-right">
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Date:</span>
+                      <span className="text-white font-medium">
+                        {new Date(invoice.date).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Amount:</span>
+                      <span className="font-bold text-primary">₹{invoice.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-end pt-2 border-t border-white/5">
                       <button 
                         onClick={() => setActiveInvoice(invoice)}
-                        className="text-muted-foreground hover:text-primary transition-all p-1.5 rounded bg-white/5 border border-white/10 cursor-pointer"
-                        title="Print Receipt"
+                        className="text-primary hover:text-primary/80 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
                       >
-                        <Printer className="w-4 h-4 inline" />
+                        <Printer className="w-3.5 h-3.5" /> View Receipt
                       </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </motion.div>

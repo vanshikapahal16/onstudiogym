@@ -21,8 +21,7 @@ import { useClerk } from "@clerk/nextjs";
 const navItems = [
   { name: "Dashboard", href: "/member", icon: LayoutDashboard },
   { name: "Attendance", href: "/member/attendance", icon: Clock },
-  { name: "Payments", href: "/member/payments", icon: CreditCard },
-  { name: "Membership", href: "/member/payments#membership", icon: CalendarDays },
+  { name: "Membership & Payments", href: "/member/payments", icon: CreditCard },
   { name: "Exercise Library", href: "/member/exercises", icon: Dumbbell },
   { name: "Profile", href: "/member/profile", icon: User },
   { name: "Notifications", href: "/member/notifications", icon: Bell },

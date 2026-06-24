@@ -647,17 +647,405 @@ function initMockDatabase() {
   const data = getMockData();
   let dataChanged = false;
 
-  if (!data.exercises) {
-    data.exercises = [];
-  }
-  if (data.exercises.length === 0) {
+  const needsSeeding = data.exercises.length < 15 || !data.exercises.some((e: any) => e.instructions && e.instructions.length > 0);
+  if (needsSeeding) {
     const DEFAULT_EXERCISES = [
-      { title: "Bench Press", category: "Chest", type: "Strength", level: "Intermediate", target: "Pectoralis Major", reps: "4 sets x 8-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470" },
-      { title: "Deadlift", category: "Back", type: "Strength", level: "Advanced", target: "Lower Back, Glutes", reps: "3 sets x 5-8 reps", duration: "15 mins", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470" },
-      { title: "Squats", category: "Legs", type: "Strength", level: "Beginner", target: "Quadriceps, Glutes", reps: "4 sets x 10-15 reps", duration: "12 mins", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470" },
-      { title: "HIIT Sprint", category: "Cardio", type: "Fat Burn", level: "Intermediate", target: "Full Body", reps: "10 rounds x 30s", duration: "20 mins", img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470" },
-      { title: "Overhead Press", category: "Shoulder", type: "Muscle Gain", level: "Intermediate", target: "Deltoids", reps: "3 sets x 10-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469" },
-      { title: "Push Ups", category: "Beginner", type: "Endurance", level: "Beginner", target: "Chest, Triceps", reps: "3 sets to failure", duration: "5 mins", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446" },
+      {
+        title: "Bench Press",
+        category: "Chest",
+        type: "Strength",
+        level: "Intermediate",
+        target: "Pectoralis Major",
+        reps: "4 sets x 8-12 reps",
+        duration: "10 mins",
+        img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
+        instructions: [
+          "Lie flat on your back on a bench. Grip the barbell with hands slightly wider than shoulder-width.",
+          "Brace your core, squeeze your shoulder blades together, and unrack the barbell.",
+          "Lower the bar slowly to your mid-chest while keeping your elbows at roughly a 45-degree angle.",
+          "Press the bar back up explosively to the starting position, extending your arms fully but not locking your elbows."
+        ],
+        benefits: [
+          "Increases upper-body push strength",
+          "Builds muscle mass in pectorals, anterior deltoids, and triceps",
+          "Enhances bone density in the upper body"
+        ],
+        effects: "Strong chest contraction, high recruitment of shoulder/tricep stabilizer muscles, and improved horizontal pressing power."
+      },
+      {
+        title: "Incline Dumbbell Press",
+        category: "Chest",
+        type: "Strength",
+        level: "Intermediate",
+        target: "Upper Chest",
+        reps: "4 sets x 10 reps",
+        duration: "12 mins",
+        img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=600",
+        instructions: [
+          "Set an incline bench to 30-45 degrees.",
+          "Hold a dumbbell in each hand at chest level, elbows bent.",
+          "Press the dumbbells straight up over your chest.",
+          "Lower the weights under control to the start position."
+        ],
+        benefits: [
+          "Target upper chest region",
+          "Build shoulder stability",
+          "Improves muscular symmetry"
+        ],
+        effects: "High activation of clavicular head of pectoralis major."
+      },
+      {
+        title: "Cable Crossover",
+        category: "Chest",
+        type: "Strength",
+        level: "Intermediate",
+        target: "Lower & Inner Chest",
+        reps: "3 sets x 12-15 reps",
+        duration: "10 mins",
+        img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=600",
+        instructions: [
+          "Set pulleys to high position. Grip handles and step forward.",
+          "Keep elbows slightly bent, lean forward.",
+          "Bring hands together in a wide arc in front of your waist.",
+          "Return slowly to starting stretch under control."
+        ],
+        benefits: [
+          "Continuous muscle tension",
+          "Great chest squeeze and pump",
+          "Minimal joint strain"
+        ],
+        effects: "Deep chest stretch and peak contraction at the bottom."
+      },
+      {
+        title: "Deadlift",
+        category: "Back",
+        type: "Strength",
+        level: "Advanced",
+        target: "Lower Back, Glutes",
+        reps: "3 sets x 5-8 reps",
+        duration: "15 mins",
+        img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470",
+        instructions: [
+          "Stand with feet shoulder-width apart, with the barbell over the middle of your feet. Hinge at your hips and bend your knees to grip the bar.",
+          "Keep your back completely flat, engage your lats, and pull your chest up slightly to create tension.",
+          "Drive through your heels, push the floor away, and stand up straight, keeping the bar close to your shins.",
+          "Lock out your hips and knees at the top, then reverse the movement by hinging at your hips to lower the bar back to the floor."
+        ],
+        benefits: [
+          "Strengthens the entire posterior chain (hamstrings, glutes, back)",
+          "Improves core stability and posture",
+          "Increases grip strength and overall functional power"
+        ],
+        effects: "High load on the spinal erectors, gluteus maximus, and hamstrings; boosts central nervous system activation and full-body structural stability."
+      },
+      {
+        title: "Lat Pulldown",
+        category: "Back",
+        type: "Strength",
+        level: "Beginner",
+        target: "Latissimus Dorsi",
+        reps: "4 sets x 10 reps",
+        duration: "10 mins",
+        img: "https://images.unsplash.com/photo-1605296867304-46d5465a25f1?q=80&w=600",
+        instructions: [
+          "Grip the pulldown bar wider than shoulder-width.",
+          "Pull bar down to upper chest, squeezing lats.",
+          "Keep chest up and elbows pointing down.",
+          "Return bar slowly to fully extended start."
+        ],
+        benefits: [
+          "Develops V-taper back",
+          "Improves pulling strength",
+          "Safer alternative to pullups"
+        ],
+        effects: "Broadens lats and engages middle back stabilizers."
+      },
+      {
+        title: "Bent-Over Row",
+        category: "Back",
+        type: "Strength",
+        level: "Intermediate",
+        target: "Rhomboids & Lats",
+        reps: "3 sets x 8-10 reps",
+        duration: "12 mins",
+        img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+        instructions: [
+          "Hinge forward with a flat back, holding barbell.",
+          "Pull bar toward lower chest, keeping elbows close.",
+          "Squeeze shoulder blades tightly at the top.",
+          "Lower bar slowly under complete control."
+        ],
+        benefits: [
+          "Increases back thickness",
+          "Improves core and hip stability",
+          "Boosts raw pulling power"
+        ],
+        effects: "Deep stimulation of middle back, lats, and biceps."
+      },
+      {
+        title: "Squats",
+        category: "Legs",
+        type: "Strength",
+        level: "Beginner",
+        target: "Quadriceps, Glutes",
+        reps: "4 sets x 10-15 reps",
+        duration: "12 mins",
+        img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
+        instructions: [
+          "Rest the barbell on your upper back (trapezius), with feet slightly wider than shoulder-width and toes pointed slightly outward.",
+          "Brace your core, look straight ahead, hinge at your hips, and bend your knees to lower your body.",
+          "Descend until your thighs are parallel to the floor (or deeper if mobility allows), keeping your knees aligned with your toes.",
+          "Drive through your heels to press yourself back up to the starting standing position, squeezing your glutes at the top."
+        ],
+        benefits: [
+          "Builds powerful quadriceps, hamstrings, and glutes",
+          "Strengthens joints, ligaments, and tendons in the lower body",
+          "Boosts core strength and balance"
+        ],
+        effects: "High muscle fiber recruitment in the legs, deep core stabilization, and improved athletic lower-body drive."
+      },
+      {
+        title: "Romanian Deadlift",
+        category: "Legs",
+        type: "Strength",
+        level: "Intermediate",
+        target: "Hamstrings & Glutes",
+        reps: "4 sets x 10 reps",
+        duration: "12 mins",
+        img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=600",
+        instructions: [
+          "Stand tall holding barbell at hip level.",
+          "Push hips back, lowering bar along your legs.",
+          "Keep knees slightly bent, back flat.",
+          "Squeeze glutes to stand up to start position."
+        ],
+        benefits: [
+          "Develops hamstring flexibility",
+          "Builds glute power",
+          "Protects lower back from strain"
+        ],
+        effects: "Eccentric loading on hamstrings and posterior chain."
+      },
+      {
+        title: "Leg Press",
+        category: "Legs",
+        type: "Hypertrophy",
+        level: "Beginner",
+        target: "Quadriceps & Glutes",
+        reps: "4 sets x 12 reps",
+        duration: "12 mins",
+        img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+        instructions: [
+          "Sit in leg press machine, feet shoulder-width on platform.",
+          "Release safety pins and lower platform toward chest.",
+          "Stop when knees reach 90 degrees.",
+          "Push platform away under control, do not lock knees."
+        ],
+        benefits: [
+          "Heavy leg loading without back fatigue",
+          "Safe quad isolation",
+          "Adjustable foot placement"
+        ],
+        effects: "Massive hypertrophy stimulus for thighs and glutes."
+      },
+      {
+        title: "HIIT Sprint",
+        category: "Cardio",
+        type: "Fat Burn",
+        level: "Intermediate",
+        target: "Full Body",
+        reps: "10 rounds x 30s",
+        duration: "20 mins",
+        img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470",
+        instructions: [
+          "Start with a 3-5 minute light jog warm-up to prepare your cardiovascular system and joints.",
+          "Sprint at 90-100% maximum effort for 30 seconds, pumping your arms and maintaining high knee lift.",
+          "Walk or jog slowly for 60-90 seconds to allow your heart rate to drop and recover.",
+          "Repeat the cycle for 8 to 12 rounds, followed by a 3-minute cool-down walk."
+        ],
+        benefits: [
+          "Maximizes caloric burn during and long after the workout (EPOC effect)",
+          "Enhances cardiovascular endurance and VO2 max",
+          "Preserves lean muscle mass while promoting rapid fat loss"
+        ],
+        effects: "Triggers high anaerobic conditioning, elevates resting metabolic rate, and improves sprint capacity."
+      },
+      {
+        title: "Jump Rope",
+        category: "Cardio",
+        type: "Fat Burn",
+        level: "Beginner",
+        target: "Calves & Cardiovascular System",
+        reps: "5 rounds x 2 mins",
+        duration: "15 mins",
+        img: "https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=600",
+        instructions: [
+          "Hold handles with hands at hip height.",
+          "Rotate wrists to swing rope overhead.",
+          "Jump slightly on balls of feet as rope passes.",
+          "Maintain a quick, steady rhythm."
+        ],
+        benefits: [
+          "Improves agility and coordination",
+          "High calorie burn",
+          "Strengthens ankles and calves"
+        ],
+        effects: "Enhances cardiovascular capacity and calf endurance."
+      },
+      {
+        title: "Stationary Cycling",
+        category: "Cardio",
+        type: "Fat Burn",
+        level: "Beginner",
+        target: "Quads & Cardiovascular System",
+        reps: "20-30 mins steady",
+        duration: "25 mins",
+        img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+        instructions: [
+          "Adjust seat height so knees have a slight bend at bottom.",
+          "Pedal at a steady resistance (RPE 6-7).",
+          "Keep back straight, shoulders relaxed.",
+          "Maintain a cadence of 80-90 RPM."
+        ],
+        benefits: [
+          "Low-impact on joints",
+          "Excellent fat burning",
+          "Improves leg stamina"
+        ],
+        effects: "Aerobic conditioning with quad and calf engagement."
+      },
+      {
+        title: "Overhead Press",
+        category: "Shoulder",
+        type: "Muscle Gain",
+        level: "Intermediate",
+        target: "Deltoids",
+        reps: "3 sets x 10-12 reps",
+        duration: "10 mins",
+        img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469",
+        instructions: [
+          "Hold the barbell at shoulder level with a closed, overhand grip, elbows pointing slightly forward.",
+          "Brace your core, squeeze your glutes, and tuck your chin back to clear a path for the bar.",
+          "Press the bar straight up overhead until your arms are fully extended, pushing your head forward at the top to lock out.",
+          "Lower the barbell back under control to the starting position at your upper chest."
+        ],
+        benefits: [
+          "Develops outstanding shoulder strength and size",
+          "Improves upper-body stabilization and core control",
+          "Strengthens triceps and upper back stabilizer muscles"
+        ],
+        effects: "Heavy loading on the anterior/medial deltoids, upper pectorals, and core stabilization muscles during vertical overhead pressing."
+      },
+      {
+        title: "Lateral Raise",
+        category: "Shoulder",
+        type: "Hypertrophy",
+        level: "Beginner",
+        target: "Lateral Deltoids",
+        reps: "4 sets x 12-15 reps",
+        duration: "8 mins",
+        img: "https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?q=80&w=600",
+        instructions: [
+          "Stand tall holding dumbbells at your sides.",
+          "Raise arms to the sides with a slight elbow bend.",
+          "Stop when arms are parallel to the floor.",
+          "Lower weights slowly back to start position."
+        ],
+        benefits: [
+          "Widens shoulder profile",
+          "Improves shoulder shape",
+          "Low risk of injury"
+        ],
+        effects: "Peak loading on the lateral head of deltoid muscle."
+      },
+      {
+        title: "Rear Delt Fly",
+        category: "Shoulder",
+        type: "Hypertrophy",
+        level: "Beginner",
+        target: "Posterior Deltoids",
+        reps: "3 sets x 15 reps",
+        duration: "8 mins",
+        img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+        instructions: [
+          "Hinge forward at hips keeping back flat.",
+          "Let dumbbells hang down below your chest.",
+          "Raise weights out to sides squeezing shoulder blades.",
+          "Lower dumbbells back down slowly."
+        ],
+        benefits: [
+          "Improves posture",
+          "Balances shoulder development",
+          "Prevents shoulder impingement"
+        ],
+        effects: "Builds thickness in the upper back and rear shoulder."
+      },
+      {
+        title: "Push Ups",
+        category: "Beginner",
+        type: "Endurance",
+        level: "Beginner",
+        target: "Chest, Triceps",
+        reps: "3 sets to failure",
+        duration: "5 mins",
+        img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446",
+        instructions: [
+          "Get into a high plank position with your hands slightly wider than shoulder-width, feet together, and body in a straight line.",
+          "Lower your chest toward the floor by bending your elbows, keeping them tucked at a 45-degree angle to your body.",
+          "Go down until your chest is just above the floor, maintaining a tight core and neutral spine.",
+          "Push through your palms to return to the starting plank position, fully extending your arms."
+        ],
+        benefits: [
+          "Convenient bodyweight exercise requiring no equipment",
+          "Builds chest, tricep, and shoulder endurance",
+          "Engages the core and lower back for stabilization"
+        ],
+        effects: "Excellent muscular endurance stimulation for the pectorals, anterior deltoids, and abdominal wall stabilization."
+      },
+      {
+        title: "Bodyweight Lunges",
+        category: "Beginner",
+        type: "Endurance",
+        level: "Beginner",
+        target: "Quads & Glutes",
+        reps: "3 sets x 12 reps per leg",
+        duration: "8 mins",
+        img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+        instructions: [
+          "Stand tall with feet hip-width apart.",
+          "Step forward with one leg, lowering hips.",
+          "Bend knees until back knee is near the floor.",
+          "Push off front foot to return to standing."
+        ],
+        benefits: [
+          "Improves single-leg balance",
+          "Engages core stabilizers",
+          "Requires zero equipment"
+        ],
+        effects: "Stretches hip flexors while working quads and glutes."
+      },
+      {
+        title: "Plank",
+        category: "Beginner",
+        type: "Core Strength",
+        level: "Beginner",
+        target: "Abdominals & Core",
+        reps: "3 sets x 60s hold",
+        duration: "6 mins",
+        img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+        instructions: [
+          "Place forearms on the floor, elbows under shoulders.",
+          "Extend legs behind you, raising body on toes.",
+          "Keep body in a perfectly straight line.",
+          "Brace core and hold position breathing steadily."
+        ],
+        benefits: [
+          "Builds deep core endurance",
+          "Protects lower back",
+          "Improves body alignment"
+        ],
+        effects: "Isometric contraction of rectus abdominis and obliques."
+      }
     ];
     data.exercises = DEFAULT_EXERCISES.map(e => ({
       _id: new mongoose.Types.ObjectId().toString(),
@@ -1062,15 +1450,407 @@ async function seedDatabaseIfEmpty() {
       const ExerciseModule = await import("../models/Exercise");
       const Exercise = mongoose.models.Exercise || ExerciseModule.default || ExerciseModule;
       const exerciseCount = await Exercise.countDocuments({});
-      if (exerciseCount === 0) {
-        console.log("🌱 Seeding default exercises into real database...");
+      const hasDetailed = await Exercise.findOne({ instructions: { $exists: true, $not: { $size: 0 } } });
+      if (exerciseCount < 15 || !hasDetailed) {
+        console.log("🌱 Overwriting/seeding default exercises with rich details into real database...");
+        await Exercise.deleteMany({ title: { $in: ["Bench Press", "Deadlift", "Squats", "HIIT Sprint", "Overhead Press", "Push Ups", "Incline Dumbbell Press", "Cable Crossover", "Lat Pulldown", "Bent-Over Row", "Romanian Deadlift", "Leg Press", "Jump Rope", "Stationary Cycling", "Lateral Raise", "Rear Delt Fly", "Bodyweight Lunges", "Plank"] } });
         const DEFAULT_EXERCISES = [
-          { title: "Bench Press", category: "Chest", type: "Strength", level: "Intermediate", target: "Pectoralis Major", reps: "4 sets x 8-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470" },
-          { title: "Deadlift", category: "Back", type: "Strength", level: "Advanced", target: "Lower Back, Glutes", reps: "3 sets x 5-8 reps", duration: "15 mins", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470" },
-          { title: "Squats", category: "Legs", type: "Strength", level: "Beginner", target: "Quadriceps, Glutes", reps: "4 sets x 10-15 reps", duration: "12 mins", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470" },
-          { title: "HIIT Sprint", category: "Cardio", type: "Fat Burn", level: "Intermediate", target: "Full Body", reps: "10 rounds x 30s", duration: "20 mins", img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470" },
-          { title: "Overhead Press", category: "Shoulder", type: "Muscle Gain", level: "Intermediate", target: "Deltoids", reps: "3 sets x 10-12 reps", duration: "10 mins", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469" },
-          { title: "Push Ups", category: "Beginner", type: "Endurance", level: "Beginner", target: "Chest, Triceps", reps: "3 sets to failure", duration: "5 mins", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446" },
+          {
+            title: "Bench Press",
+            category: "Chest",
+            type: "Strength",
+            level: "Intermediate",
+            target: "Pectoralis Major",
+            reps: "4 sets x 8-12 reps",
+            duration: "10 mins",
+            img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
+            instructions: [
+              "Lie flat on your back on a bench. Grip the barbell with hands slightly wider than shoulder-width.",
+              "Brace your core, squeeze your shoulder blades together, and unrack the barbell.",
+              "Lower the bar slowly to your mid-chest while keeping your elbows at roughly a 45-degree angle.",
+              "Press the bar back up explosively to the starting position, extending your arms fully but not locking your elbows."
+            ],
+            benefits: [
+              "Increases upper-body push strength",
+              "Builds muscle mass in pectorals, anterior deltoids, and triceps",
+              "Enhances bone density in the upper body"
+            ],
+            effects: "Strong chest contraction, high recruitment of shoulder/tricep stabilizer muscles, and improved horizontal pressing power."
+          },
+          {
+            title: "Incline Dumbbell Press",
+            category: "Chest",
+            type: "Strength",
+            level: "Intermediate",
+            target: "Upper Chest",
+            reps: "4 sets x 10 reps",
+            duration: "12 mins",
+            img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=600",
+            instructions: [
+              "Set an incline bench to 30-45 degrees.",
+              "Hold a dumbbell in each hand at chest level, elbows bent.",
+              "Press the dumbbells straight up over your chest.",
+              "Lower the weights under control to the start position."
+            ],
+            benefits: [
+              "Target upper chest region",
+              "Build shoulder stability",
+              "Improves muscular symmetry"
+            ],
+            effects: "High activation of clavicular head of pectoralis major."
+          },
+          {
+            title: "Cable Crossover",
+            category: "Chest",
+            type: "Strength",
+            level: "Intermediate",
+            target: "Lower & Inner Chest",
+            reps: "3 sets x 12-15 reps",
+            duration: "10 mins",
+            img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=600",
+            instructions: [
+              "Set pulleys to high position. Grip handles and step forward.",
+              "Keep elbows slightly bent, lean forward.",
+              "Bring hands together in a wide arc in front of your waist.",
+              "Return slowly to starting stretch under control."
+            ],
+            benefits: [
+              "Continuous muscle tension",
+              "Great chest squeeze and pump",
+              "Minimal joint strain"
+            ],
+            effects: "Deep chest stretch and peak contraction at the bottom."
+          },
+          {
+            title: "Deadlift",
+            category: "Back",
+            type: "Strength",
+            level: "Advanced",
+            target: "Lower Back, Glutes",
+            reps: "3 sets x 5-8 reps",
+            duration: "15 mins",
+            img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470",
+            instructions: [
+              "Stand with feet shoulder-width apart, with the barbell over the middle of your feet. Hinge at your hips and bend your knees to grip the bar.",
+              "Keep your back completely flat, engage your lats, and pull your chest up slightly to create tension.",
+              "Drive through your heels, push the floor away, and stand up straight, keeping the bar close to your shins.",
+              "Lock out your hips and knees at the top, then reverse the movement by hinging at your hips to lower the bar back to the floor."
+            ],
+            benefits: [
+              "Strengthens the entire posterior chain (hamstrings, glutes, back)",
+              "Improves core stability and posture",
+              "Increases grip strength and overall functional power"
+            ],
+            effects: "High load on the spinal erectors, gluteus maximus, and hamstrings; boosts central nervous system activation and full-body structural stability."
+          },
+          {
+            title: "Lat Pulldown",
+            category: "Back",
+            type: "Strength",
+            level: "Beginner",
+            target: "Latissimus Dorsi",
+            reps: "4 sets x 10 reps",
+            duration: "10 mins",
+            img: "https://images.unsplash.com/photo-1605296867304-46d5465a25f1?q=80&w=600",
+            instructions: [
+              "Grip the pulldown bar wider than shoulder-width.",
+              "Pull bar down to upper chest, squeezing lats.",
+              "Keep chest up and elbows pointing down.",
+              "Return bar slowly to fully extended start."
+            ],
+            benefits: [
+              "Develops V-taper back",
+              "Improves pulling strength",
+              "Safer alternative to pullups"
+            ],
+            effects: "Broadens lats and engages middle back stabilizers."
+          },
+          {
+            title: "Bent-Over Row",
+            category: "Back",
+            type: "Strength",
+            level: "Intermediate",
+            target: "Rhomboids & Lats",
+            reps: "3 sets x 8-10 reps",
+            duration: "12 mins",
+            img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+            instructions: [
+              "Hinge forward with a flat back, holding barbell.",
+              "Pull bar toward lower chest, keeping elbows close.",
+              "Squeeze shoulder blades tightly at the top.",
+              "Lower bar slowly under complete control."
+            ],
+            benefits: [
+              "Increases back thickness",
+              "Improves core and hip stability",
+              "Boosts raw pulling power"
+            ],
+            effects: "Deep stimulation of middle back, lats, and biceps."
+          },
+          {
+            title: "Squats",
+            category: "Legs",
+            type: "Strength",
+            level: "Beginner",
+            target: "Quadriceps, Glutes",
+            reps: "4 sets x 10-15 reps",
+            duration: "12 mins",
+            img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
+            instructions: [
+              "Rest the barbell on your upper back (trapezius), with feet slightly wider than shoulder-width and toes pointed slightly outward.",
+              "Brace your core, look straight ahead, hinge at your hips, and bend your knees to lower your body.",
+              "Descend until your thighs are parallel to the floor (or deeper if mobility allows), keeping your knees aligned with your toes.",
+              "Drive through your heels to press yourself back up to the starting standing position, squeezing your glutes at the top."
+            ],
+            benefits: [
+              "Builds powerful quadriceps, hamstrings, and glutes",
+              "Strengthens joints, ligaments, and tendons in the lower body",
+              "Boosts core strength and balance"
+            ],
+            effects: "High muscle fiber recruitment in the legs, deep core stabilization, and improved athletic lower-body drive."
+          },
+          {
+            title: "Romanian Deadlift",
+            category: "Legs",
+            type: "Strength",
+            level: "Intermediate",
+            target: "Hamstrings & Glutes",
+            reps: "4 sets x 10 reps",
+            duration: "12 mins",
+            img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=600",
+            instructions: [
+              "Stand tall holding barbell at hip level.",
+              "Push hips back, lowering bar along your legs.",
+              "Keep knees slightly bent, back flat.",
+              "Squeeze glutes to stand up to start position."
+            ],
+            benefits: [
+              "Develops hamstring flexibility",
+              "Builds glute power",
+              "Protects lower back from strain"
+            ],
+            effects: "Eccentric loading on hamstrings and posterior chain."
+          },
+          {
+            title: "Leg Press",
+            category: "Legs",
+            type: "Hypertrophy",
+            level: "Beginner",
+            target: "Quadriceps & Glutes",
+            reps: "4 sets x 12 reps",
+            duration: "12 mins",
+            img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+            instructions: [
+              "Sit in leg press machine, feet shoulder-width on platform.",
+              "Release safety pins and lower platform toward chest.",
+              "Stop when knees reach 90 degrees.",
+              "Push platform away under control, do not lock knees."
+            ],
+            benefits: [
+              "Heavy leg loading without back fatigue",
+              "Safe quad isolation",
+              "Adjustable foot placement"
+            ],
+            effects: "Massive hypertrophy stimulus for thighs and glutes."
+          },
+          {
+            title: "HIIT Sprint",
+            category: "Cardio",
+            type: "Fat Burn",
+            level: "Intermediate",
+            target: "Full Body",
+            reps: "10 rounds x 30s",
+            duration: "20 mins",
+            img: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470",
+            instructions: [
+              "Start with a 3-5 minute light jog warm-up to prepare your cardiovascular system and joints.",
+              "Sprint at 90-100% maximum effort for 30 seconds, pumping your arms and maintaining high knee lift.",
+              "Walk or jog slowly for 60-90 seconds to allow your heart rate to drop and recover.",
+              "Repeat the cycle for 8 to 12 rounds, followed by a 3-minute cool-down walk."
+            ],
+            benefits: [
+              "Maximizes caloric burn during and long after the workout (EPOC effect)",
+              "Enhances cardiovascular endurance and VO2 max",
+              "Preserves lean muscle mass while promoting rapid fat loss"
+            ],
+            effects: "Triggers high anaerobic conditioning, elevates resting metabolic rate, and improves sprint capacity."
+          },
+          {
+            title: "Jump Rope",
+            category: "Cardio",
+            type: "Fat Burn",
+            level: "Beginner",
+            target: "Calves & Cardiovascular System",
+            reps: "5 rounds x 2 mins",
+            duration: "15 mins",
+            img: "https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=600",
+            instructions: [
+              "Hold handles with hands at hip height.",
+              "Rotate wrists to swing rope overhead.",
+              "Jump slightly on balls of feet as rope passes.",
+              "Maintain a quick, steady rhythm."
+            ],
+            benefits: [
+              "Improves agility and coordination",
+              "High calorie burn",
+              "Strengthens ankles and calves"
+            ],
+            effects: "Enhances cardiovascular capacity and calf endurance."
+          },
+          {
+            title: "Stationary Cycling",
+            category: "Cardio",
+            type: "Fat Burn",
+            level: "Beginner",
+            target: "Quads & Cardiovascular System",
+            reps: "20-30 mins steady",
+            duration: "25 mins",
+            img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+            instructions: [
+              "Adjust seat height so knees have a slight bend at bottom.",
+              "Pedal at a steady resistance (RPE 6-7).",
+              "Keep back straight, shoulders relaxed.",
+              "Maintain a cadence of 80-90 RPM."
+            ],
+            benefits: [
+              "Low-impact on joints",
+              "Excellent fat burning",
+              "Improves leg stamina"
+            ],
+            effects: "Aerobic conditioning with quad and calf engagement."
+          },
+          {
+            title: "Overhead Press",
+            category: "Shoulder",
+            type: "Muscle Gain",
+            level: "Intermediate",
+            target: "Deltoids",
+            reps: "3 sets x 10-12 reps",
+            duration: "10 mins",
+            img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469",
+            instructions: [
+              "Hold the barbell at shoulder level with a closed, overhand grip, elbows pointing slightly forward.",
+              "Brace your core, squeeze your glutes, and tuck your chin back to clear a path for the bar.",
+              "Press the bar straight up overhead until your arms are fully extended, pushing your head forward at the top to lock out.",
+              "Lower the barbell back under control to the starting position at your upper chest."
+            ],
+            benefits: [
+              "Develops outstanding shoulder strength and size",
+              "Improves upper-body stabilization and core control",
+              "Strengthens triceps and upper back stabilizer muscles"
+            ],
+            effects: "Heavy loading on the anterior/medial deltoids, upper pectorals, and core stabilization muscles during vertical overhead pressing."
+          },
+          {
+            title: "Lateral Raise",
+            category: "Shoulder",
+            type: "Hypertrophy",
+            level: "Beginner",
+            target: "Lateral Deltoids",
+            reps: "4 sets x 12-15 reps",
+            duration: "8 mins",
+            img: "https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?q=80&w=600",
+            instructions: [
+              "Stand tall holding dumbbells at your sides.",
+              "Raise arms to the sides with a slight elbow bend.",
+              "Stop when arms are parallel to the floor.",
+              "Lower weights slowly back to start position."
+            ],
+            benefits: [
+              "Widens shoulder profile",
+              "Improves shoulder shape",
+              "Low risk of injury"
+            ],
+            effects: "Peak loading on the lateral head of deltoid muscle."
+          },
+          {
+            title: "Rear Delt Fly",
+            category: "Shoulder",
+            type: "Hypertrophy",
+            level: "Beginner",
+            target: "Posterior Deltoids",
+            reps: "3 sets x 15 reps",
+            duration: "8 mins",
+            img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+            instructions: [
+              "Hinge forward at hips keeping back flat.",
+              "Let dumbbells hang down below your chest.",
+              "Raise weights out to sides squeezing shoulder blades.",
+              "Lower dumbbells back down slowly."
+            ],
+            benefits: [
+              "Improves posture",
+              "Balances shoulder development",
+              "Prevents shoulder impingement"
+            ],
+            effects: "Builds thickness in the upper back and rear shoulder."
+          },
+          {
+            title: "Push Ups",
+            category: "Beginner",
+            type: "Endurance",
+            level: "Beginner",
+            target: "Chest, Triceps",
+            reps: "3 sets to failure",
+            duration: "5 mins",
+            img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446",
+            instructions: [
+              "Get into a high plank position with your hands slightly wider than shoulder-width, feet together, and body in a straight line.",
+              "Lower your chest toward the floor by bending your elbows, keeping them tucked at a 45-degree angle to your body.",
+              "Go down until your chest is just above the floor, maintaining a tight core and neutral spine.",
+              "Push through your palms to return to the starting plank position, fully extending your arms."
+            ],
+            benefits: [
+              "Convenient bodyweight exercise requiring no equipment",
+              "Builds chest, tricep, and shoulder endurance",
+              "Engages the core and lower back for stabilization"
+            ],
+            effects: "Excellent muscular endurance stimulation for the pectorals, anterior deltoids, and abdominal wall stabilization."
+          },
+          {
+            title: "Bodyweight Lunges",
+            category: "Beginner",
+            type: "Endurance",
+            level: "Beginner",
+            target: "Quads & Glutes",
+            reps: "3 sets x 12 reps per leg",
+            duration: "8 mins",
+            img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+            instructions: [
+              "Stand tall with feet hip-width apart.",
+              "Step forward with one leg, lowering hips.",
+              "Bend knees until back knee is near the floor.",
+              "Push off front foot to return to standing."
+            ],
+            benefits: [
+              "Improves single-leg balance",
+              "Engages core stabilizers",
+              "Requires zero equipment"
+            ],
+            effects: "Stretches hip flexors while working quads and glutes."
+          },
+          {
+            title: "Plank",
+            category: "Beginner",
+            type: "Core Strength",
+            level: "Beginner",
+            target: "Abdominals & Core",
+            reps: "3 sets x 60s hold",
+            duration: "6 mins",
+            img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+            instructions: [
+              "Place forearms on the floor, elbows under shoulders.",
+              "Extend legs behind you, raising body on toes.",
+              "Keep body in a perfectly straight line.",
+              "Brace core and hold position breathing steadily."
+            ],
+            benefits: [
+              "Builds deep core endurance",
+              "Protects lower back",
+              "Improves body alignment"
+            ],
+            effects: "Isometric contraction of rectus abdominis and obliques."
+          }
         ];
         await Exercise.insertMany(DEFAULT_EXERCISES);
       }
@@ -1107,6 +1887,10 @@ export async function connectToDatabase() {
     console.warn("⚠️ INITIAL_ADMIN_PASSWORD environment variable is missing.");
   }
 
+  if (MONGODB_URI.includes("xxxxxxx")) {
+    global.useMockDatabase = true;
+  }
+
   if (global.useMockDatabase) {
     initMockDatabase();
     return null;
@@ -1120,6 +1904,7 @@ export async function connectToDatabase() {
     const opts = {
       bufferCommands: false,
       dbName: "crestDB",
+      serverSelectionTimeoutMS: 2000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {

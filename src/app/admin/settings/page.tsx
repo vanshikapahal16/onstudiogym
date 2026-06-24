@@ -155,12 +155,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { name: "Gym Details", icon: Building },
-    { name: "Account Profile", icon: User },
     ...(currentAdmin?.role === "superadmin" ? [{ name: "Manage Admins", icon: Users }] : []),
-    { name: "Notifications", icon: BellRing },
-    { name: "Payment Settings", icon: CreditCard },
-    { name: "Security", icon: Shield },
-    { name: "System Preferences", icon: Settings2 },
   ];
 
   return (
@@ -400,14 +395,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {activeTab !== "Gym Details" && activeTab !== "Manage Admins" && (
-            <div className="glass-panel p-6 rounded-2xl border border-white/10">
-              <h3 className="text-lg font-bold text-white mb-4 border-b border-white/10 pb-4">{activeTab}</h3>
-              <p className="text-sm text-muted-foreground">
-                Settings in the <strong>{activeTab}</strong> tab are currently operating on automatic default values.
-              </p>
-            </div>
-          )}
+
         </motion.div>
       </div>
     </div>

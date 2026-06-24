@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { unique_id, passkey } = await req.json();
+    console.log(`🔐 Admin login attempt: unique_id="${unique_id}", passkey="${passkey}"`);
 
     if (!unique_id || !passkey) {
       return sendError("Unique ID and Passkey are required", null, 400);
@@ -63,11 +64,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!admin) {
+      console.log(`❌ Admin with uniqueId/email/phone="${unique_id}" not found in database.`);
       return sendError("Invalid credentials", null, 401);
     }
 
     const isMatch = await admin.comparePassword(passkey);
+    console.log(`🕵️ Password match result for admin "${admin.uniqueId}": ${isMatch}`);
     if (!isMatch) {
+      console.log(`❌ Password mismatch for admin="${admin.uniqueId}".`);
       return sendError("Invalid credentials", null, 401);
     }
 

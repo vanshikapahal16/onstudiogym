@@ -12,6 +12,7 @@ import {
   ArrowDownRight,
   UserCheck,
   RefreshCw,
+  Wallet,
 } from "lucide-react";
 import {
   AreaChart,
@@ -34,6 +35,7 @@ interface Stats {
   pendingDues: number;
   inactiveMembersCount: number;
   pendingMembers?: number;
+  todayCollection?: number;
 }
 
 interface Occupant {
@@ -108,37 +110,27 @@ export default function Dashboard() {
 
   const metrics = [
     {
-      title: "Current Inside",
-      value: stats ? stats.currentOccupancy.toString() : "0",
-      icon: Activity,
-      change: stats && stats.currentOccupancy > 5 ? "Busy" : "Moderate",
-      trend: "up",
-      color: "text-primary",
-      bg: "bg-primary/10",
-      border: "border-primary/20",
-    },
-    {
-      title: "Today's Attendance",
-      value: stats ? stats.todayCheckins.toString() : "0",
-      icon: UserCheck,
-      change: "+15% vs yesterday",
-      trend: "up",
-      color: "text-secondary",
-      bg: "bg-secondary/10",
-      border: "border-secondary/20",
-    },
-    {
-      title: "Active Members",
-      value: stats ? stats.activeMembers.toString() : "0",
+      title: "Total Members",
+      value: stats ? stats.totalMembers.toString() : "0",
       icon: Users,
-      change: `Total: ${stats ? stats.totalMembers : 0}`,
+      change: stats ? `Active: ${stats.activeMembers}` : "N/A",
       trend: "up",
       color: "text-white",
       bg: "bg-white/10",
       border: "border-white/20",
     },
     {
-      title: "Pending Payments",
+      title: "Total Revenue Collected",
+      value: stats ? `₹${stats.totalRevenue.toLocaleString()}` : "₹0",
+      icon: TrendingUp,
+      change: "Lifetime collection",
+      trend: "up",
+      color: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/20",
+    },
+    {
+      title: "Pending Amount",
       value: stats ? `₹${stats.pendingDues.toLocaleString()}` : "₹0",
       icon: Clock,
       change: stats && stats.pendingDues > 20000 ? "Follow up required" : "Healthy",
@@ -148,10 +140,20 @@ export default function Dashboard() {
       border: "border-yellow-500/20",
     },
     {
-      title: "Gross Revenue",
-      value: stats ? `₹${stats.totalRevenue.toLocaleString()}` : "₹0",
-      icon: TrendingUp,
-      change: "+22% this quarter",
+      title: "Today's Collection",
+      value: stats && stats.todayCollection !== undefined ? `₹${stats.todayCollection.toLocaleString()}` : "₹0",
+      icon: Wallet,
+      change: "Aggregated today",
+      trend: "up",
+      color: "text-secondary",
+      bg: "bg-secondary/10",
+      border: "border-secondary/20",
+    },
+    {
+      title: "Today's Attendance",
+      value: stats ? stats.todayCheckins.toString() : "0",
+      icon: UserCheck,
+      change: stats && stats.currentOccupancy !== undefined ? `Inside: ${stats.currentOccupancy}` : "N/A",
       trend: "up",
       color: "text-primary",
       bg: "bg-primary/10",
@@ -164,8 +166,8 @@ export default function Dashboard() {
       {/* Upper Control Bar */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-bold text-white">Operational Intelligence</h2>
-          <p className="text-xs text-muted-foreground">Real-time database feed verified</p>
+          <h2 className="text-lg font-bold text-white">Admin Dashboard</h2>
+          <p className="text-xs text-muted-foreground">Real-time updates</p>
         </div>
         <button
           onClick={fetchDashboardData}
@@ -256,8 +258,8 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Revenue Trajectory</h3>
-              <p className="text-sm text-muted-foreground">Gross collections over time (INR)</p>
+              <h3 className="text-lg font-bold text-white">Revenue Collected</h3>
+              <p className="text-sm text-muted-foreground">Revenue collected over time</p>
             </div>
             <select className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary">
               <option className="bg-[#0B0F19]">Operational Year (2026)</option>
@@ -278,7 +280,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0B0F19', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }}
                   itemStyle={{ color: '#00FFB2' }}
-                  formatter={(value) => [`₹${parseFloat(value as string).toLocaleString()}`, "Gross Collections"]}
+                  formatter={(value) => [`₹${parseFloat(value as string).toLocaleString()}`, "Total Revenue Collected"]}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#00FFB2" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
               </AreaChart>

@@ -141,3 +141,68 @@ export async function GET(req: NextRequest) {
     return sendError("An internal error occurred while fetching admin attendance data.", error, 500);
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Authenticate user as Admin
+    const decoded = verifyAuthToken(req);
+    if (!decoded || !isAdmin(decoded)) {
+      return sendUnauthorized("Only administrators can perform this action.");
+    }
+
+    await connectToDatabase();
+
+    const { memberId } = await req.json();
+    if (!memberId) {
+      return sendError("Please provide a member ID", null, 400);
+    }
+
+    const member = await Member.findById(memberId);
+    if (!member) {
+      return sendError("Member not found", null, 404);
+    }
+
+    // Validation: cannot check-in suspended members
+    if (member.membershipStatus === "Suspended") {
+      return sendError("Member is suspended. Please reactivate them first.", null, 400);
+    }
+
+    // Duplicate Check-in validation (One check-in per day)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateObj = new Date(Date.now() + istOffset);
+    const dateStr = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD
+    const timeStr = dateObj.toISOString().split("T")[1].substring(0, 8); // HH:MM:SS
+
+    const existingAttendance = await Attendance.findOne({
+      userId: member._id,
+      date: dateStr,
+    });
+
+    if (existingAttendance) {
+      return sendError("Attendance already marked today.", null, 400);
+    }
+
+    // Create Attendance Record
+    const newAttendance = await Attendance.create({
+      userId: member._id,
+      name: member.fullName || member.name,
+      email: member.email,
+      date: dateStr,
+      time: timeStr,
+      status: "Present",
+    });
+
+    // Update Member stats
+    member.lastVisit = new Date();
+    member.attendanceCount = (member.attendanceCount || 0) + 1;
+    await member.save();
+
+    return sendSuccess("Member checked in successfully ✅", {
+      attendance: newAttendance,
+    });
+  } catch (error) {
+    console.error("Failed to check in member:", error);
+    return sendError("An internal error occurred while checking in member.", error, 500);
+  }
+}
+

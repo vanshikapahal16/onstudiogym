@@ -317,7 +317,7 @@ export default function MembersPage() {
 
   const handleCheckIn = async (memberId: string) => {
     try {
-      const res = await fetch("/api/attendance/checkin", {
+      const res = await fetch("/api/admin/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId }),
@@ -328,25 +328,6 @@ export default function MembersPage() {
         fetchMembers();
       } else {
         alert(data.message || "Failed to check in");
-      }
-    } catch (err: any) {
-      alert("Error occurred: " + err.message);
-    }
-  };
-
-  const handleCheckOut = async (memberId: string) => {
-    try {
-      const res = await fetch("/api/attendance/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Member checked out successfully!");
-        fetchMembers();
-      } else {
-        alert(data.message || "Failed to check out");
       }
     } catch (err: any) {
       alert("Error occurred: " + err.message);
@@ -383,7 +364,7 @@ export default function MembersPage() {
 
   const openPayModal = (member: Member) => {
     setSelectedMember(member);
-    setPayAmount(member.remainingAmount.toString());
+    setPayAmount("");
     setFormError("");
     setIsPayModalOpen(true);
     setActiveDropdown(null);
@@ -630,7 +611,7 @@ export default function MembersPage() {
                           ) : (
                             <>
                               <button
-                                title="Record Payment"
+                                title="Update Record"
                                 onClick={() => openPayModal(member)}
                                 className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20 text-muted-foreground transition-colors cursor-pointer"
                               >
@@ -643,15 +624,6 @@ export default function MembersPage() {
                               >
                                 <RefreshCw className="w-4 h-4" />
                               </button>
-                              {member.role !== "admin" && (
-                                <button
-                                  title="Promote to Admin"
-                                  onClick={() => handlePromoteToAdmin(member)}
-                                  className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-muted-foreground transition-colors cursor-pointer"
-                                >
-                                  <Shield className="w-4 h-4" />
-                                </button>
-                              )}
                               <button
                                 title="Edit Member"
                                 onClick={() => openEditModal(member)}
@@ -660,7 +632,7 @@ export default function MembersPage() {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Suspend Member"}
+                                title={member.membershipStatus === "Suspended" ? "Reactivate Member" : "Pause Membership"}
                                 onClick={() => handleToggleSuspend(member)}
                                 className={`p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground transition-colors cursor-pointer ${
                                   member.membershipStatus === "Suspended"
@@ -686,13 +658,6 @@ export default function MembersPage() {
                                 className="p-2 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary text-black transition-colors text-xs font-bold cursor-pointer"
                               >
                                 <UserCheck className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleCheckOut(member._id)}
-                                title="Quick Check-Out"
-                                className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black text-yellow-500 transition-colors text-xs font-bold cursor-pointer"
-                              >
-                                <Clock className="w-3.5 h-3.5" />
                               </button>
                             </>
                           )}
@@ -780,7 +745,7 @@ export default function MembersPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/5">
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
                     <button
                       onClick={() => handleCheckIn(member._id)}
                       className="py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary active:text-black transition-all"
@@ -789,18 +754,11 @@ export default function MembersPage() {
                       <span>Check-In</span>
                     </button>
                     <button
-                      onClick={() => handleCheckOut(member._id)}
-                      className="py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-yellow-500 active:text-black transition-all"
-                    >
-                      <Clock className="w-4 h-4" />
-                      <span>Check-Out</span>
-                    </button>
-                    <button
                       onClick={() => openPayModal(member)}
                       className="py-2 rounded-xl bg-white/5 border border-white/10 text-emerald-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-emerald-500/10"
                     >
                       <CreditCard className="w-4 h-4" />
-                      <span>Pay</span>
+                      <span>Update</span>
                     </button>
                     <button
                       onClick={() => openRenewModal(member)}
@@ -820,15 +778,6 @@ export default function MembersPage() {
                       <Ban className="w-4 h-4" />
                       <span>{member.membershipStatus === "Suspended" ? "Activate" : "Suspend"}</span>
                     </button>
-                    {member.role !== "admin" && (
-                      <button
-                        onClick={() => handlePromoteToAdmin(member)}
-                        className="py-2 rounded-xl bg-white/5 border border-white/10 text-primary flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-primary/10"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span>Promote</span>
-                      </button>
-                    )}
                     <button
                       onClick={() => openEditModal(member)}
                       className="py-2 rounded-xl bg-white/5 border border-white/10 text-blue-400 flex flex-col items-center justify-center text-[10px] font-bold gap-1 active:bg-blue-500/10"
@@ -1208,23 +1157,35 @@ export default function MembersPage() {
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-wider">Record Dues Payment</h3>
+                  <h3 className="text-xl font-bold text-white uppercase tracking-wider">Update Dues Payment</h3>
                   <p className="text-sm text-muted-foreground mt-1">Collect remaining dues for {selectedMember.fullName}</p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Contract Value:</span>
+                    <span className="text-muted-foreground">Membership Fee:</span>
                     <span className="text-white font-semibold">₹{selectedMember.totalFee.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Already Paid:</span>
                     <span className="text-primary font-semibold">₹{selectedMember.totalPaid.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs border-t border-white/10 pt-2 font-bold">
-                    <span className="text-white">Outstanding Dues:</span>
-                    <span className="text-yellow-500">₹{selectedMember.remainingAmount.toLocaleString()}</span>
+                  <div className="flex justify-between text-xs border-t border-white/10 pt-2">
+                    <span className="text-white">Remaining Amount:</span>
+                    <span className="text-yellow-500 font-semibold">₹{selectedMember.remainingAmount.toLocaleString()}</span>
                   </div>
+                  {payAmount && !isNaN(parseFloat(payAmount)) && parseFloat(payAmount) > 0 && (
+                    <div className="border-t border-dashed border-white/10 pt-2 space-y-1 bg-primary/5 -mx-4 px-4 py-2 mt-2">
+                      <div className="flex justify-between text-xs font-bold text-primary">
+                        <span>New Total Paid:</span>
+                        <span>₹{(selectedMember.totalPaid + parseFloat(payAmount)).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-emerald-400">
+                        <span>New Remaining:</span>
+                        <span>₹{Math.max(0, selectedMember.remainingAmount - parseFloat(payAmount)).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {formError && (
@@ -1236,7 +1197,7 @@ export default function MembersPage() {
                 <form onSubmit={handlePaySubmit} className="space-y-4">
                   <div>
                     <label className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2 block">
-                      Amount to Pay (₹)
+                      New Amount Received (₹)
                     </label>
                     <input
                       type="number"
@@ -1253,7 +1214,7 @@ export default function MembersPage() {
                     disabled={submitting}
                     className="w-full py-4 bg-emerald-500 text-black font-bold uppercase tracking-wider rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {submitting ? "Recording..." : "Record Payment"}
+                    {submitting ? "Updating..." : "Update Record"}
                   </button>
                 </form>
               </div>

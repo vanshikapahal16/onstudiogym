@@ -37,6 +37,18 @@ const ExerciseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    instructions: {
+      type: [String],
+      default: [],
+    },
+    benefits: {
+      type: [String],
+      default: [],
+    },
+    effects: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

@@ -9,7 +9,11 @@ interface MemberTopbarProps {
 }
 
 export default function MemberTopbar({ onMenuClick }: MemberTopbarProps) {
-  const [streak] = useState(() => Math.floor(Math.random() * 5) + 3);
+  const [streak, setStreak] = useState(3);
+
+  useEffect(() => {
+    setStreak(Math.floor(Math.random() * 5) + 3);
+  }, []);
 
   return (
     <header className="h-20 border-b border-white/10 glass-panel sticky top-0 z-40 flex items-center justify-between px-4 sm:px-8 backdrop-blur-xl bg-[#0B0F19]/80">

@@ -110,7 +110,7 @@ function AdminLoginContent() {
                   required
                   value={uniqueId}
                   onChange={(e) => setUniqueId(e.target.value)}
-                  placeholder="Enter unique ID (e.g. akash1284)"
+                  placeholder="Enter Unique ID"
                   className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-[#3B82F6]/50 focus:ring-1 focus:ring-[#3B82F6]/50 transition-all font-sans"
                 />
               </div>

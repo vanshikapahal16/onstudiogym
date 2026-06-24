@@ -11,7 +11,8 @@
       "role": "superadmin",
       "isActive": true,
       "createdAt": "2026-05-22T12:06:10.883Z",
-      "updatedAt": "2026-05-22T12:06:10.886Z"
+      "updatedAt": "2026-05-22T12:06:10.886Z",
+      "uniqueId": "vanshika16"
     },
     {
       "_id": "6a0d71af48bdc2acb31c1056",
@@ -24,30 +25,24 @@
       "role": "admin",
       "isActive": true,
       "createdAt": "2026-05-22T12:06:10.886Z",
-      "updatedAt": "2026-05-22T12:06:10.886Z"
+      "updatedAt": "2026-05-22T12:06:10.886Z",
+      "uniqueId": "sukchain"
+    },
+    {
+      "_id": "6a3ba0b114486a648dbdfa50",
+      "name": "Akash",
+      "uniqueId": "akash1284",
+      "phone": "0000000000",
+      "email": "akash@onfitness.com",
+      "password": "$2b$10$oYziaLu1MnNbuPuaB76nA.XYeZCdumVdrMTpCEKq9uPtMwB1qBWxu",
+      "hashedPassword": "$2b$10$oYziaLu1MnNbuPuaB76nA.XYeZCdumVdrMTpCEKq9uPtMwB1qBWxu",
+      "role": "superadmin",
+      "isActive": true,
+      "createdAt": "2026-06-24T09:17:37.813Z",
+      "updatedAt": "2026-06-24T09:17:37.813Z"
     }
   ],
   "members": [
-    {
-      "_id": "6a0d71af48bdc2acb31c1044",
-      "fullName": "Gym Member",
-      "phoneNumber": "9876543210",
-      "email": "member@gym.com",
-      "address": "123 Fitness Street",
-      "password": "$2b$10$CCE0UDNWXELg2780X/94J.uu5LDpRm1Uc3OKhWmgmnkIOPSIIUP4G",
-      "membershipDuration": 12,
-      "membershipExpiry": "2027-05-21T18:11:34.071Z",
-      "totalFee": 500,
-      "totalPaid": 500,
-      "remainingAmount": 0,
-      "membershipStatus": "Active",
-      "mustChangePassword": false,
-      "role": "member",
-      "createdAt": "2026-05-20T08:32:47.312Z",
-      "updatedAt": "2026-05-21T18:11:34.071Z",
-      "lastVisit": "2026-05-21T18:11:34.071Z",
-      "attendanceCount": 1
-    },
     {
       "_id": "6a0f488b37074cfbd1dd5ed2",
       "fullName": "vanshika",
@@ -55,48 +50,607 @@
       "email": "vanshikapahal16@gmail.com",
       "address": "sonipat",
       "password": "$2b$10$JcfnAyid1VG61e.P55Aacu3vqwYwtU7PsCOXlDZ6nxsee/WQOKtdW",
-      "profileImage": "https://ui-avatars.com/api/?name=Gym+Member&background=random",
+      "profileImage": "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvb2F1dGhfZ29vZ2xlL2ltZ18zRWNsbTJtVXNmZzZ5WENxeWFJSWs5MFZmWFQifQ",
       "totalFee": 1000,
       "membershipDuration": 1,
       "totalPaid": 0,
       "mustChangePassword": true,
-      "membershipExpiry": "2026-06-21T18:01:47.339Z",
+      "membershipExpiry": "2026-07-24T09:43:21.136Z",
       "remainingAmount": 1000,
       "membershipStatus": "Active",
-      "updatedAt": "2026-05-21T18:01:47.339Z",
-      "createdAt": "2026-05-21T18:01:47.339Z"
+      "updatedAt": "2026-06-24T10:03:06.748Z",
+      "createdAt": "2026-05-21T18:01:47.339Z",
+      "qrIdentifier": "qr_e5jzbxkuiz9mqrv147q",
+      "qrCreatedAt": "2026-06-24T09:17:37.815Z",
+      "approved": true,
+      "membershipActive": true,
+      "role": "member",
+      "isActive": true,
+      "attendanceCount": 0,
+      "membershipStartDate": "2026-06-24T09:43:21.136Z",
+      "membershipPlan": "Monthly",
+      "name": "vanshika",
+      "phone": "9588715527",
+      "joinDate": "2026-06-24T09:43:21.136Z",
+      "membershipEndDate": "2026-07-24T09:43:21.136Z",
+      "paymentStatus": "Unpaid",
+      "clerkId": "user_3Eclly72s2ft0obxyRdNcquSgxG"
     },
     {
-      "_id": "6a0d71af48bdc2acb31c1057",
-      "name": "Rahul",
-      "fullName": "Rahul",
-      "phone": "9999999999",
-      "phoneNumber": "9999999999",
-      "email": "rahul@gmail.com",
-      "address": "Delhi, India",
-      "password": "$2b$10$8Htd6BNDNbnP4TEkt8fGseFPcIcBJEz/2Qh8UrMmIVU3/ciGOLepi",
-      "hashedPassword": "$2b$10$8Htd6BNDNbnP4TEkt8fGseFPcIcBJEz/2Qh8UrMmIVU3/ciGOLepi",
-      "membershipPlan": "Gold",
+      "_id": "6a3ba0b114486a648dbdfa51",
+      "name": "Test Member",
+      "fullName": "Test Member",
+      "phone": "1234567890",
+      "phoneNumber": "1234567890",
+      "email": "testmember@gmail.com",
+      "address": "123 Gym Street",
+      "membershipPlan": "Annual",
       "membershipDuration": 12,
-      "membershipStartDate": "2026-05-22T12:06:10.886Z",
-      "membershipEndDate": "2027-05-22T12:06:10.886Z",
-      "membershipExpiry": "2027-05-22T12:06:10.887Z",
+      "membershipStartDate": "2026-06-24T09:17:37.814Z",
+      "membershipEndDate": "2027-06-24T09:17:37.813Z",
+      "membershipExpiry": "2027-06-24T09:17:37.813Z",
       "totalFee": 1000,
       "totalPaid": 1000,
       "remainingAmount": 0,
       "membershipStatus": "Active",
       "paymentStatus": "Paid",
       "isActive": true,
+      "approved": true,
+      "membershipActive": true,
       "mustChangePassword": false,
       "role": "member",
-      "createdAt": "2026-05-22T12:06:10.887Z",
-      "updatedAt": "2026-05-22T12:06:10.887Z"
+      "qrIdentifier": "qr_testmember123456789",
+      "qrCreatedAt": "2026-06-24T09:17:37.814Z",
+      "createdAt": "2026-06-24T09:17:37.814Z",
+      "updatedAt": "2026-06-24T09:17:37.814Z"
+    },
+    {
+      "_id": "6a3ba77e4666195a9e79f8ef",
+      "name": "amit",
+      "phone": "9588715527",
+      "email": "amit@gmail.com",
+      "address": "sonipat",
+      "profileImage": "https://ui-avatars.com/api/?name=amit&background=random",
+      "membershipPlan": "Monthly",
+      "membershipDuration": 1,
+      "totalFee": 2000,
+      "totalPaid": 1500,
+      "approved": true,
+      "membershipActive": true,
+      "isActive": true,
+      "membershipStatus": "Active",
+      "mustChangePassword": false,
+      "role": "member",
+      "attendanceCount": 0,
+      "qrIdentifier": "qr_bf8qm77yi7emqrw2fe5",
+      "qrCreatedAt": "2026-06-24T09:46:38.573Z",
+      "fullName": "amit",
+      "phoneNumber": "9588715527",
+      "membershipEndDate": "2026-07-24T09:47:32.963Z",
+      "membershipExpiry": "2026-07-24T09:47:32.963Z",
+      "remainingAmount": 500,
+      "paymentStatus": "Partially Paid",
+      "updatedAt": "2026-06-24T09:47:57.537Z",
+      "createdAt": "2026-06-24T09:46:38.575Z",
+      "membershipStartDate": "2026-06-24T09:47:32.963Z",
+      "joinDate": "2026-06-24T09:47:32.963Z"
     }
   ],
-  "payments": [],
-  "notifications": [],
+  "payments": [
+    {
+      "_id": "6a3ba77e4666195a9e79f8f0",
+      "memberId": "6a3ba77e4666195a9e79f8ef",
+      "amount": 2000,
+      "invoiceId": "INV-1782294398577-849",
+      "status": "Partially Paid",
+      "date": "2026-06-24T09:46:38.577Z",
+      "updatedAt": "2026-06-24T09:46:38.656Z",
+      "createdAt": "2026-06-24T09:46:38.656Z"
+    },
+    {
+      "_id": "6a3ba78e4666195a9e79f8f1",
+      "memberId": "6a3ba77e4666195a9e79f8ef",
+      "amount": 700,
+      "invoiceId": "INV-1782294414012-244",
+      "status": "Partially Paid",
+      "date": "2026-06-24T09:46:54.012Z",
+      "updatedAt": "2026-06-24T09:46:54.040Z",
+      "createdAt": "2026-06-24T09:46:54.040Z"
+    },
+    {
+      "_id": "6a3ba7b44666195a9e79f8f3",
+      "memberId": "6a3ba77e4666195a9e79f8ef",
+      "amount": 1000,
+      "invoiceId": "INV-1782294452964-775",
+      "status": "Partially Paid",
+      "date": "2026-06-24T09:47:32.964Z",
+      "updatedAt": "2026-06-24T09:47:32.966Z",
+      "createdAt": "2026-06-24T09:47:32.966Z"
+    },
+    {
+      "_id": "6a3ba7cd4666195a9e79f8f4",
+      "memberId": "6a3ba77e4666195a9e79f8ef",
+      "amount": 500,
+      "invoiceId": "INV-1782294477539-855",
+      "status": "Partially Paid",
+      "date": "2026-06-24T09:47:57.539Z",
+      "updatedAt": "2026-06-24T09:47:57.567Z",
+      "createdAt": "2026-06-24T09:47:57.567Z"
+    }
+  ],
+  "notifications": [
+    {
+      "_id": "6a3ba78e4666195a9e79f8f2",
+      "userId": "6a3ba77e4666195a9e79f8ef",
+      "title": "Payment Received",
+      "message": "We've successfully processed your payment of $700. Remaining dues: $3300.",
+      "type": "payment",
+      "updatedAt": "2026-06-24T09:46:54.061Z",
+      "createdAt": "2026-06-24T09:46:54.061Z"
+    },
+    {
+      "_id": "6a3ba7cd4666195a9e79f8f5",
+      "userId": "6a3ba77e4666195a9e79f8ef",
+      "title": "Payment Received",
+      "message": "We've successfully processed your payment of $500. Remaining dues: $500.",
+      "type": "payment",
+      "updatedAt": "2026-06-24T09:47:57.609Z",
+      "createdAt": "2026-06-24T09:47:57.609Z"
+    }
+  ],
   "inquiries": [],
-  "exercises": [],
+  "exercises": [
+    {
+      "_id": "6a3bb0ce4666195a9e79f8fc",
+      "title": "Bench Press",
+      "category": "Chest",
+      "type": "Strength",
+      "level": "Intermediate",
+      "target": "Pectoralis Major",
+      "reps": "4 sets x 8-12 reps",
+      "duration": "10 mins",
+      "img": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
+      "instructions": [
+        "Lie flat on your back on a bench. Grip the barbell with hands slightly wider than shoulder-width.",
+        "Brace your core, squeeze your shoulder blades together, and unrack the barbell.",
+        "Lower the bar slowly to your mid-chest while keeping your elbows at roughly a 45-degree angle.",
+        "Press the bar back up explosively to the starting position, extending your arms fully but not locking your elbows."
+      ],
+      "benefits": [
+        "Increases upper-body push strength",
+        "Builds muscle mass in pectorals, anterior deltoids, and triceps",
+        "Enhances bone density in the upper body"
+      ],
+      "effects": "Strong chest contraction, high recruitment of shoulder/tricep stabilizer muscles, and improved horizontal pressing power.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f8fd",
+      "title": "Incline Dumbbell Press",
+      "category": "Chest",
+      "type": "Strength",
+      "level": "Intermediate",
+      "target": "Upper Chest",
+      "reps": "4 sets x 10 reps",
+      "duration": "12 mins",
+      "img": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=600",
+      "instructions": [
+        "Set an incline bench to 30-45 degrees.",
+        "Hold a dumbbell in each hand at chest level, elbows bent.",
+        "Press the dumbbells straight up over your chest.",
+        "Lower the weights under control to the start position."
+      ],
+      "benefits": [
+        "Target upper chest region",
+        "Build shoulder stability",
+        "Improves muscular symmetry"
+      ],
+      "effects": "High activation of clavicular head of pectoralis major.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f8fe",
+      "title": "Cable Crossover",
+      "category": "Chest",
+      "type": "Strength",
+      "level": "Intermediate",
+      "target": "Lower & Inner Chest",
+      "reps": "3 sets x 12-15 reps",
+      "duration": "10 mins",
+      "img": "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=600",
+      "instructions": [
+        "Set pulleys to high position. Grip handles and step forward.",
+        "Keep elbows slightly bent, lean forward.",
+        "Bring hands together in a wide arc in front of your waist.",
+        "Return slowly to starting stretch under control."
+      ],
+      "benefits": [
+        "Continuous muscle tension",
+        "Great chest squeeze and pump",
+        "Minimal joint strain"
+      ],
+      "effects": "Deep chest stretch and peak contraction at the bottom.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f8ff",
+      "title": "Deadlift",
+      "category": "Back",
+      "type": "Strength",
+      "level": "Advanced",
+      "target": "Lower Back, Glutes",
+      "reps": "3 sets x 5-8 reps",
+      "duration": "15 mins",
+      "img": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470",
+      "instructions": [
+        "Stand with feet shoulder-width apart, with the barbell over the middle of your feet. Hinge at your hips and bend your knees to grip the bar.",
+        "Keep your back completely flat, engage your lats, and pull your chest up slightly to create tension.",
+        "Drive through your heels, push the floor away, and stand up straight, keeping the bar close to your shins.",
+        "Lock out your hips and knees at the top, then reverse the movement by hinging at your hips to lower the bar back to the floor."
+      ],
+      "benefits": [
+        "Strengthens the entire posterior chain (hamstrings, glutes, back)",
+        "Improves core stability and posture",
+        "Increases grip strength and overall functional power"
+      ],
+      "effects": "High load on the spinal erectors, gluteus maximus, and hamstrings; boosts central nervous system activation and full-body structural stability.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f900",
+      "title": "Lat Pulldown",
+      "category": "Back",
+      "type": "Strength",
+      "level": "Beginner",
+      "target": "Latissimus Dorsi",
+      "reps": "4 sets x 10 reps",
+      "duration": "10 mins",
+      "img": "https://images.unsplash.com/photo-1605296867304-46d5465a25f1?q=80&w=600",
+      "instructions": [
+        "Grip the pulldown bar wider than shoulder-width.",
+        "Pull bar down to upper chest, squeezing lats.",
+        "Keep chest up and elbows pointing down.",
+        "Return bar slowly to fully extended start."
+      ],
+      "benefits": [
+        "Develops V-taper back",
+        "Improves pulling strength",
+        "Safer alternative to pullups"
+      ],
+      "effects": "Broadens lats and engages middle back stabilizers.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f901",
+      "title": "Bent-Over Row",
+      "category": "Back",
+      "type": "Strength",
+      "level": "Intermediate",
+      "target": "Rhomboids & Lats",
+      "reps": "3 sets x 8-10 reps",
+      "duration": "12 mins",
+      "img": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+      "instructions": [
+        "Hinge forward with a flat back, holding barbell.",
+        "Pull bar toward lower chest, keeping elbows close.",
+        "Squeeze shoulder blades tightly at the top.",
+        "Lower bar slowly under complete control."
+      ],
+      "benefits": [
+        "Increases back thickness",
+        "Improves core and hip stability",
+        "Boosts raw pulling power"
+      ],
+      "effects": "Deep stimulation of middle back, lats, and biceps.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f902",
+      "title": "Squats",
+      "category": "Legs",
+      "type": "Strength",
+      "level": "Beginner",
+      "target": "Quadriceps, Glutes",
+      "reps": "4 sets x 10-15 reps",
+      "duration": "12 mins",
+      "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
+      "instructions": [
+        "Rest the barbell on your upper back (trapezius), with feet slightly wider than shoulder-width and toes pointed slightly outward.",
+        "Brace your core, look straight ahead, hinge at your hips, and bend your knees to lower your body.",
+        "Descend until your thighs are parallel to the floor (or deeper if mobility allows), keeping your knees aligned with your toes.",
+        "Drive through your heels to press yourself back up to the starting standing position, squeezing your glutes at the top."
+      ],
+      "benefits": [
+        "Builds powerful quadriceps, hamstrings, and glutes",
+        "Strengthens joints, ligaments, and tendons in the lower body",
+        "Boosts core strength and balance"
+      ],
+      "effects": "High muscle fiber recruitment in the legs, deep core stabilization, and improved athletic lower-body drive.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f903",
+      "title": "Romanian Deadlift",
+      "category": "Legs",
+      "type": "Strength",
+      "level": "Intermediate",
+      "target": "Hamstrings & Glutes",
+      "reps": "4 sets x 10 reps",
+      "duration": "12 mins",
+      "img": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=600",
+      "instructions": [
+        "Stand tall holding barbell at hip level.",
+        "Push hips back, lowering bar along your legs.",
+        "Keep knees slightly bent, back flat.",
+        "Squeeze glutes to stand up to start position."
+      ],
+      "benefits": [
+        "Develops hamstring flexibility",
+        "Builds glute power",
+        "Protects lower back from strain"
+      ],
+      "effects": "Eccentric loading on hamstrings and posterior chain.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f904",
+      "title": "Leg Press",
+      "category": "Legs",
+      "type": "Hypertrophy",
+      "level": "Beginner",
+      "target": "Quadriceps & Glutes",
+      "reps": "4 sets x 12 reps",
+      "duration": "12 mins",
+      "img": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+      "instructions": [
+        "Sit in leg press machine, feet shoulder-width on platform.",
+        "Release safety pins and lower platform toward chest.",
+        "Stop when knees reach 90 degrees.",
+        "Push platform away under control, do not lock knees."
+      ],
+      "benefits": [
+        "Heavy leg loading without back fatigue",
+        "Safe quad isolation",
+        "Adjustable foot placement"
+      ],
+      "effects": "Massive hypertrophy stimulus for thighs and glutes.",
+      "createdAt": "2026-06-24T10:26:22.131Z",
+      "updatedAt": "2026-06-24T10:26:22.131Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f905",
+      "title": "HIIT Sprint",
+      "category": "Cardio",
+      "type": "Fat Burn",
+      "level": "Intermediate",
+      "target": "Full Body",
+      "reps": "10 rounds x 30s",
+      "duration": "20 mins",
+      "img": "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470",
+      "instructions": [
+        "Start with a 3-5 minute light jog warm-up to prepare your cardiovascular system and joints.",
+        "Sprint at 90-100% maximum effort for 30 seconds, pumping your arms and maintaining high knee lift.",
+        "Walk or jog slowly for 60-90 seconds to allow your heart rate to drop and recover.",
+        "Repeat the cycle for 8 to 12 rounds, followed by a 3-minute cool-down walk."
+      ],
+      "benefits": [
+        "Maximizes caloric burn during and long after the workout (EPOC effect)",
+        "Enhances cardiovascular endurance and VO2 max",
+        "Preserves lean muscle mass while promoting rapid fat loss"
+      ],
+      "effects": "Triggers high anaerobic conditioning, elevates resting metabolic rate, and improves sprint capacity.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f906",
+      "title": "Jump Rope",
+      "category": "Cardio",
+      "type": "Fat Burn",
+      "level": "Beginner",
+      "target": "Calves & Cardiovascular System",
+      "reps": "5 rounds x 2 mins",
+      "duration": "15 mins",
+      "img": "https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=600",
+      "instructions": [
+        "Hold handles with hands at hip height.",
+        "Rotate wrists to swing rope overhead.",
+        "Jump slightly on balls of feet as rope passes.",
+        "Maintain a quick, steady rhythm."
+      ],
+      "benefits": [
+        "Improves agility and coordination",
+        "High calorie burn",
+        "Strengthens ankles and calves"
+      ],
+      "effects": "Enhances cardiovascular capacity and calf endurance.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f907",
+      "title": "Stationary Cycling",
+      "category": "Cardio",
+      "type": "Fat Burn",
+      "level": "Beginner",
+      "target": "Quads & Cardiovascular System",
+      "reps": "20-30 mins steady",
+      "duration": "25 mins",
+      "img": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+      "instructions": [
+        "Adjust seat height so knees have a slight bend at bottom.",
+        "Pedal at a steady resistance (RPE 6-7).",
+        "Keep back straight, shoulders relaxed.",
+        "Maintain a cadence of 80-90 RPM."
+      ],
+      "benefits": [
+        "Low-impact on joints",
+        "Excellent fat burning",
+        "Improves leg stamina"
+      ],
+      "effects": "Aerobic conditioning with quad and calf engagement.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f908",
+      "title": "Overhead Press",
+      "category": "Shoulder",
+      "type": "Muscle Gain",
+      "level": "Intermediate",
+      "target": "Deltoids",
+      "reps": "3 sets x 10-12 reps",
+      "duration": "10 mins",
+      "img": "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=1469",
+      "instructions": [
+        "Hold the barbell at shoulder level with a closed, overhand grip, elbows pointing slightly forward.",
+        "Brace your core, squeeze your glutes, and tuck your chin back to clear a path for the bar.",
+        "Press the bar straight up overhead until your arms are fully extended, pushing your head forward at the top to lock out.",
+        "Lower the barbell back under control to the starting position at your upper chest."
+      ],
+      "benefits": [
+        "Develops outstanding shoulder strength and size",
+        "Improves upper-body stabilization and core control",
+        "Strengthens triceps and upper back stabilizer muscles"
+      ],
+      "effects": "Heavy loading on the anterior/medial deltoids, upper pectorals, and core stabilization muscles during vertical overhead pressing.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f909",
+      "title": "Lateral Raise",
+      "category": "Shoulder",
+      "type": "Hypertrophy",
+      "level": "Beginner",
+      "target": "Lateral Deltoids",
+      "reps": "4 sets x 12-15 reps",
+      "duration": "8 mins",
+      "img": "https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?q=80&w=600",
+      "instructions": [
+        "Stand tall holding dumbbells at your sides.",
+        "Raise arms to the sides with a slight elbow bend.",
+        "Stop when arms are parallel to the floor.",
+        "Lower weights slowly back to start position."
+      ],
+      "benefits": [
+        "Widens shoulder profile",
+        "Improves shoulder shape",
+        "Low risk of injury"
+      ],
+      "effects": "Peak loading on the lateral head of deltoid muscle.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f90a",
+      "title": "Rear Delt Fly",
+      "category": "Shoulder",
+      "type": "Hypertrophy",
+      "level": "Beginner",
+      "target": "Posterior Deltoids",
+      "reps": "3 sets x 15 reps",
+      "duration": "8 mins",
+      "img": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+      "instructions": [
+        "Hinge forward at hips keeping back flat.",
+        "Let dumbbells hang down below your chest.",
+        "Raise weights out to sides squeezing shoulder blades.",
+        "Lower dumbbells back down slowly."
+      ],
+      "benefits": [
+        "Improves posture",
+        "Balances shoulder development",
+        "Prevents shoulder impingement"
+      ],
+      "effects": "Builds thickness in the upper back and rear shoulder.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f90b",
+      "title": "Push Ups",
+      "category": "Beginner",
+      "type": "Endurance",
+      "level": "Beginner",
+      "target": "Chest, Triceps",
+      "reps": "3 sets to failure",
+      "duration": "5 mins",
+      "img": "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?q=80&w=1446",
+      "instructions": [
+        "Get into a high plank position with your hands slightly wider than shoulder-width, feet together, and body in a straight line.",
+        "Lower your chest toward the floor by bending your elbows, keeping them tucked at a 45-degree angle to your body.",
+        "Go down until your chest is just above the floor, maintaining a tight core and neutral spine.",
+        "Push through your palms to return to the starting plank position, fully extending your arms."
+      ],
+      "benefits": [
+        "Convenient bodyweight exercise requiring no equipment",
+        "Builds chest, tricep, and shoulder endurance",
+        "Engages the core and lower back for stabilization"
+      ],
+      "effects": "Excellent muscular endurance stimulation for the pectorals, anterior deltoids, and abdominal wall stabilization.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f90c",
+      "title": "Bodyweight Lunges",
+      "category": "Beginner",
+      "type": "Endurance",
+      "level": "Beginner",
+      "target": "Quads & Glutes",
+      "reps": "3 sets x 12 reps per leg",
+      "duration": "8 mins",
+      "img": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+      "instructions": [
+        "Stand tall with feet hip-width apart.",
+        "Step forward with one leg, lowering hips.",
+        "Bend knees until back knee is near the floor.",
+        "Push off front foot to return to standing."
+      ],
+      "benefits": [
+        "Improves single-leg balance",
+        "Engages core stabilizers",
+        "Requires zero equipment"
+      ],
+      "effects": "Stretches hip flexors while working quads and glutes.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    },
+    {
+      "_id": "6a3bb0ce4666195a9e79f90d",
+      "title": "Plank",
+      "category": "Beginner",
+      "type": "Core Strength",
+      "level": "Beginner",
+      "target": "Abdominals & Core",
+      "reps": "3 sets x 60s hold",
+      "duration": "6 mins",
+      "img": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=600",
+      "instructions": [
+        "Place forearms on the floor, elbows under shoulders.",
+        "Extend legs behind you, raising body on toes.",
+        "Keep body in a perfectly straight line.",
+        "Brace core and hold position breathing steadily."
+      ],
+      "benefits": [
+        "Builds deep core endurance",
+        "Protects lower back",
+        "Improves body alignment"
+      ],
+      "effects": "Isometric contraction of rectus abdominis and obliques.",
+      "createdAt": "2026-06-24T10:26:22.133Z",
+      "updatedAt": "2026-06-24T10:26:22.133Z"
+    }
+  ],
   "gallery": [
     {
       "_id": "6a0f4a9383e9c15bc3bede06",
@@ -124,15 +678,16 @@
       "order": 2,
       "updatedAt": "2026-05-21T18:10:27.897Z",
       "createdAt": "2026-05-21T18:10:27.897Z"
+    },
+    {
+      "_id": "6a3ba6ff4666195a9e79f8ee",
+      "publicId": "mock_1782294271068",
+      "url": "https://images.unsplash.com/photo-1517838357463-d25dfeac3438?q=80&w=600",
+      "caption": "Gym Media",
+      "order": 3,
+      "updatedAt": "2026-06-24T09:44:31.075Z",
+      "createdAt": "2026-06-24T09:44:31.075Z"
     }
   ],
-  "attendance": [
-    {
-      "_id": "6a0f4ad639012a29df53c7d1",
-      "memberId": "6a0d71af48bdc2acb31c1044",
-      "checkIn": "2026-05-21T18:11:34.067Z",
-      "updatedAt": "2026-05-21T18:11:34.070Z",
-      "createdAt": "2026-05-21T18:11:34.070Z"
-    }
-  ]
+  "attendance": []
 }

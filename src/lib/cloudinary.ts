@@ -27,6 +27,7 @@ export async function uploadImage(fileStr: string): Promise<{ publicId: string; 
   try {
     const uploadResponse = await cloudinary.uploader.upload(fileStr, {
       folder: "on_fitness_gallery",
+      resource_type: "auto",
     });
     return {
       publicId: uploadResponse.public_id,
@@ -38,14 +39,15 @@ export async function uploadImage(fileStr: string): Promise<{ publicId: string; 
   }
 }
 
-export async function deleteImage(publicId: string): Promise<void> {
+export async function deleteImage(publicId: string, isVideo: boolean = false): Promise<void> {
   if (publicId.startsWith("mock_")) {
     console.log(`⚠️ Mock Image Deleted: ${publicId}`);
     return;
   }
 
   try {
-    await cloudinary.uploader.destroy(publicId);
+    const options = isVideo ? { resource_type: "video" } : { resource_type: "image" };
+    await cloudinary.uploader.destroy(publicId, options);
   } catch (error) {
     console.error("Cloudinary deletion error:", error);
     throw new Error("Failed to delete image from Cloudinary");

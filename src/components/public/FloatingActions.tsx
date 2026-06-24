@@ -13,17 +13,27 @@ export default function FloatingActions() {
       <a 
         href="https://instagram.com/on_fitness_studio" 
         target="_blank"
-        className="w-14 h-14 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 hover:shadow-pink-500/50 transition-all duration-300"
+        className="w-14 h-14 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 hover:shadow-pink-500/50 transition-all duration-300 relative group"
       >
         <Instagram className="w-6 h-6" />
+        
+        {/* Tooltip */}
+        <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-black/90 backdrop-blur-md text-white text-sm font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 hidden md:block">
+          Instagram Direct
+        </div>
       </a>
       
       {/* Call */}
       <a 
         href="tel:8400050073" 
-        className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 hover:shadow-blue-500/50 transition-all duration-300 md:hidden"
+        className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 hover:shadow-blue-500/50 transition-all duration-300 relative group"
       >
         <Phone className="w-6 h-6" />
+        
+        {/* Tooltip */}
+        <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-black/90 backdrop-blur-md text-white text-sm font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 hidden md:block">
+          Call 8400050073
+        </div>
       </a>
 
       {/* WhatsApp */}
@@ -36,7 +46,7 @@ export default function FloatingActions() {
         
         {/* Tooltip */}
         <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-black/90 backdrop-blur-md text-white text-sm font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 hidden md:block">
-          Chat with us
+          WhatsApp Chat
         </div>
       </a>
     </div>

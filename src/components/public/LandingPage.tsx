@@ -593,6 +593,24 @@ export default function LandingPage({ initialGalleryImages }: { initialGalleryIm
                       <p className="text-white font-medium">8400050073</p>
                     </div>
                   </a>
+                  <a href="https://wa.me/918400050073" target="_blank" className="glass-panel p-6 rounded-2xl border border-white/10 hover:border-[#c39b62]/50 transition-all group flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-green-500 transition-colors">
+                      <MessageCircle className="w-5 h-5 text-green-400 group-hover:text-black" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">WhatsApp Call & Chat</p>
+                      <p className="text-white font-medium">8400050073</p>
+                    </div>
+                  </a>
+                  <a href="https://instagram.com/on_fitness_studio" target="_blank" className="glass-panel p-6 rounded-2xl border border-white/10 hover:border-[#c39b62]/50 transition-all group flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gradient-to-tr group-hover:from-yellow-500 group-hover:to-purple-500 transition-colors">
+                      <Instagram className="w-5 h-5 text-pink-400 group-hover:text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Instagram Direct</p>
+                      <p className="text-white font-medium">on_fitness_studio</p>
+                    </div>
+                  </a>
                   <a href="mailto:contact@onfitness.com" className="glass-panel p-6 rounded-2xl border border-white/10 hover:border-[#c39b62]/50 transition-all group flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#c39b62] transition-colors">
                       <Mail className="w-5 h-5 text-[#c39b62] group-hover:text-black" />
